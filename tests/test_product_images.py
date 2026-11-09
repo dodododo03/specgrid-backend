@@ -222,3 +222,11 @@ def test_reorder_requires_exact_set(client, auth_headers, product, ids):
     body = {"missing-one": [a["id"]], "duplicate": [a["id"], a["id"]], "foreign": [a["id"], 999999]}[ids]
     r = client.put(f"{API}/products/{product['id']}/images/order", json={"image_ids": body}, headers=auth_headers)
     assert r.status_code == 400
+
+
+def test_swagger_shows_file_picker_for_uploads(client):
+    """Regression: OpenAPI 3.1 'contentMediaType' alone made Swagger UI render text boxes (-> 422)."""
+    schema = client.get("/openapi.json").json()
+    body = schema["paths"]["/api/v1/products/{product_id}/images"]["post"]["requestBody"]
+    ref = body["content"]["multipart/form-data"]["schema"]["$ref"].split("/")[-1]
+    assert schema["components"]["schemas"][ref]["properties"]["files"]["items"]["format"] == "binary"

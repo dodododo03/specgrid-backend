@@ -23,6 +23,33 @@ async def handle_app_error(_: Request, exc: AppError) -> JSONResponse:
     )
 
 
+def _mark_binary_fields(node: object) -> None:
+    """OpenAPI 3.1 describes uploads as {"contentMediaType": "application/octet-stream"}, which
+    Swagger UI renders as a *text* box for arrays of files. Adding format=binary makes it show
+    a file picker again. Only the generated docs change; request handling is unaffected."""
+    if isinstance(node, dict):
+        if node.get("contentMediaType") == "application/octet-stream":
+            node.setdefault("format", "binary")
+        for value in node.values():
+            _mark_binary_fields(value)
+    elif isinstance(node, list):
+        for value in node:
+            _mark_binary_fields(value)
+
+
+def _install_openapi_fix(app: FastAPI) -> None:
+    original = app.openapi
+
+    def openapi() -> dict:
+        if app.openapi_schema is None:
+            schema = original()
+            _mark_binary_fields(schema)
+            app.openapi_schema = schema
+        return app.openapi_schema
+
+    app.openapi = openapi  # type: ignore[method-assign]
+
+
 def create_app() -> FastAPI:
     app = FastAPI(
         title=settings.app_name,
@@ -44,6 +71,7 @@ def create_app() -> FastAPI:
 
     app.add_exception_handler(AppError, handle_app_error)
     app.include_router(api_router, prefix=settings.api_v1_prefix)
+    _install_openapi_fix(app)
 
     if settings.app_env != "production":
         # Local storage backend: serve uploaded files directly. In production a CDN/S3
