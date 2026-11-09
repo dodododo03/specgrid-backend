@@ -1,0 +1,21 @@
+# Web framework
+fastapi>=0.118,<1.0
+uvicorn[standard]>=0.37,<1.0
+
+# Validation / settings
+pydantic>=2.12,<3.0
+pydantic-settings>=2.11,<3.0
+
+# Database (MariaDB)
+SQLAlchemy>=2.0.44,<2.1
+alembic>=1.17,<2.0
+PyMySQL>=1.1.2,<2.0
+cryptography>=46.0   # PyMySQL auth plugins (caching_sha2 / sha256)
+
+# Cache / distributed lock
+redis>=6.4,<7.0
+
+# Auth
+PyJWT>=2.10,<3.0
+argon2-cffi>=25.1,<26.0
+email-validator>=2.3,<3.0
