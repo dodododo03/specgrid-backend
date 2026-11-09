@@ -34,6 +34,13 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 30
     refresh_token_expire_days: int = 14
 
+    # Media storage. Keys are stored in the DB; URLs are built from media_base_url,
+    # so moving to a CDN/S3 later only changes these settings + the storage backend.
+    media_root: str = "media"
+    media_base_url: str = "http://localhost:8000/media"
+    max_images_per_product: int = 10
+    max_image_upload_mb: int = 10
+
     # Brute-force protection (Redis counters)
     login_max_attempts_per_email: int = 5
     login_max_attempts_per_ip: int = 30

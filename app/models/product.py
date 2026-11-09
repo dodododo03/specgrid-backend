@@ -19,7 +19,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.db.base import Base, TimestampMixin, enum_column
+from app.db.base import Base, CreatedAtMixin, TimestampMixin, enum_column
 from app.models.enums import ProductCategory, ProductCondition, ProductStatus
 from app.models.user import User
 
@@ -53,7 +53,6 @@ class Product(TimestampMixin, Base):
         server_default=ProductStatus.ON_SALE.value,
     )
     is_hot_deal: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("0"))
-    thumbnail_url: Mapped[str | None] = mapped_column(String(2048))
     trade_location: Mapped[str | None] = mapped_column(String(100))
     view_count: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("0"))
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime)  # soft delete
@@ -62,6 +61,18 @@ class Product(TimestampMixin, Base):
     spec: Mapped[ProductSpec | None] = relationship(
         back_populates="product", uselist=False, cascade="all, delete-orphan"
     )
+    # selectin: one extra query per page of products, not one per product
+    images: Mapped[list[ProductImage]] = relationship(
+        back_populates="product",
+        cascade="all, delete-orphan",
+        order_by="(ProductImage.sort_order, ProductImage.id)",
+        lazy="selectin",
+    )
+
+    @property
+    def thumbnail_key(self) -> str | None:
+        """The first image is the cover shown in listings."""
+        return self.images[0].thumb_key if self.images else None
 
     def __repr__(self) -> str:
         return f"<Product id={self.id} title={self.title!r}>"
@@ -96,3 +107,22 @@ class ProductSpec(Base):
     extra_specs: Mapped[dict[str, Any] | None] = mapped_column(JSON)
 
     product: Mapped[Product] = relationship(back_populates="spec")
+
+
+class ProductImage(CreatedAtMixin, Base):
+    __tablename__ = "product_images"
+    __table_args__ = (Index("ix_product_images_product_id_sort_order", "product_id", "sort_order"),)
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    product_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("products.id", ondelete="CASCADE"), nullable=False
+    )
+    # Storage keys (not URLs): the public URL is derived from settings at response time.
+    storage_key: Mapped[str] = mapped_column(String(255), nullable=False)
+    thumb_key: Mapped[str] = mapped_column(String(255), nullable=False)
+    width: Mapped[int] = mapped_column(Integer, nullable=False)
+    height: Mapped[int] = mapped_column(Integer, nullable=False)
+    size_bytes: Mapped[int] = mapped_column(Integer, nullable=False)
+    sort_order: Mapped[int] = mapped_column(SmallInteger, nullable=False)
+
+    product: Mapped[Product] = relationship(back_populates="images")

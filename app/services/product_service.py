@@ -31,21 +31,20 @@ def create_product(db: Session, seller: User, data: ProductCreate) -> Product:
         description=data.description,
         price=data.price,
         condition=data.condition,
-        thumbnail_url=str(data.thumbnail_url) if data.thumbnail_url else None,
         trade_location=data.trade_location,
     )
     if data.spec is not None:
         product.spec = ProductSpec(**data.spec.model_dump())
     db.add(product)
     db.commit()
-    return _load_detail(db, product.id, public_only=False)
+    return load_detail(db, product.id, public_only=False)
 
 
 def _visible() -> list:
     return [Product.deleted_at.is_(None), Product.status != ProductStatus.HIDDEN]
 
 
-def _load_detail(db: Session, product_id: int, *, public_only: bool) -> Product:
+def load_detail(db: Session, product_id: int, *, public_only: bool) -> Product:
     conditions = [Product.id == product_id, Product.deleted_at.is_(None)]
     if public_only:
         conditions.append(Product.status != ProductStatus.HIDDEN)
@@ -71,10 +70,10 @@ def get_product(db: Session, product_id: int) -> Product:
     db.commit()
     if result.rowcount == 0:
         raise NotFoundError(NOT_FOUND)
-    return _load_detail(db, product_id, public_only=True)
+    return load_detail(db, product_id, public_only=True)
 
 
-def _get_owned_for_update(db: Session, product_id: int, user: User) -> Product:
+def get_owned_for_update(db: Session, product_id: int, user: User) -> Product:
     """Lock the row (SELECT ... FOR UPDATE) so concurrent edits by the owner don't interleave."""
     product = db.scalar(
         select(Product)
@@ -89,10 +88,10 @@ def _get_owned_for_update(db: Session, product_id: int, user: User) -> Product:
 
 
 def update_product(db: Session, product_id: int, user: User, data: ProductUpdate) -> Product:
-    product = _get_owned_for_update(db, product_id, user)
+    product = get_owned_for_update(db, product_id, user)
 
     for field, value in data.model_dump(exclude_unset=True, exclude={"spec"}).items():
-        setattr(product, field, str(value) if field == "thumbnail_url" and value is not None else value)
+        setattr(product, field, value)
 
     if "spec" in data.model_fields_set:
         if data.spec is None:
@@ -106,19 +105,19 @@ def update_product(db: Session, product_id: int, user: User, data: ProductUpdate
                     setattr(product.spec, field, value)
 
     db.commit()
-    return _load_detail(db, product_id, public_only=False)
+    return load_detail(db, product_id, public_only=False)
 
 
 def change_status(db: Session, product_id: int, user: User, data: ProductStatusUpdate) -> Product:
-    product = _get_owned_for_update(db, product_id, user)
+    product = get_owned_for_update(db, product_id, user)
     product.status = data.status
     db.commit()
-    return _load_detail(db, product_id, public_only=False)
+    return load_detail(db, product_id, public_only=False)
 
 
 def delete_product(db: Session, product_id: int, user: User) -> None:
     """Soft delete: the row stays for chat/activity history but disappears everywhere in the API."""
-    product = _get_owned_for_update(db, product_id, user)
+    product = get_owned_for_update(db, product_id, user)
     product.deleted_at = func.now()
     db.commit()
 

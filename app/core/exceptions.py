@@ -33,6 +33,16 @@ class PermissionDeniedError(AppError):
     code = "forbidden"
 
 
+class InvalidImageError(AppError):
+    status_code = 422
+    code = "invalid_image"
+
+
+class PayloadTooLargeError(AppError):
+    status_code = 413
+    code = "payload_too_large"
+
+
 class TooManyRequestsError(AppError):
     status_code = 429
     code = "too_many_requests"

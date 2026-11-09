@@ -8,6 +8,10 @@ import os
 
 os.environ["DB_NAME"] = "specgrid_test"  # must be set before app settings are imported
 os.environ["REDIS_URL"] = "redis://localhost:6379/15"  # dev data lives in db 0
+import shutil  # noqa: E402
+import tempfile  # noqa: E402
+
+os.environ["MEDIA_ROOT"] = tempfile.mkdtemp(prefix="specgrid-media-")  # never write into ./media
 
 from collections.abc import Iterator  # noqa: E402
 
@@ -30,6 +34,12 @@ API = "/api/v1"
 @pytest.fixture(scope="session", autouse=True)
 def _migrate_test_db() -> None:
     command.upgrade(Config("alembic.ini"), "head")
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _cleanup_media() -> Iterator[None]:
+    yield
+    shutil.rmtree(os.environ["MEDIA_ROOT"], ignore_errors=True)
 
 
 @pytest.fixture

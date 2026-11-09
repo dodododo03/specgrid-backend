@@ -1,6 +1,9 @@
+from pathlib import Path
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
 
 from app.api.v1.router import api_router
 from app.core.config import settings
@@ -43,6 +46,12 @@ def create_app() -> FastAPI:
     app.include_router(api_router, prefix=settings.api_v1_prefix)
 
     if settings.app_env != "production":
+        # Local storage backend: serve uploaded files directly. In production a CDN/S3
+        # (or nginx) serves media and MEDIA_BASE_URL points there instead.
+        media_dir = Path(settings.media_root)
+        media_dir.mkdir(parents=True, exist_ok=True)
+        app.mount("/media", StaticFiles(directory=media_dir), name="media")
+
         @app.get("/", include_in_schema=False)
         def root() -> RedirectResponse:
             return RedirectResponse(url="/docs")

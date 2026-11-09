@@ -3,7 +3,7 @@
 from app.db.base import Base
 from app.models.activity import UserActivityLog
 from app.models.chat import ChatMessage, ChatRoom
-from app.models.product import Product, ProductSpec
+from app.models.product import Product, ProductImage, ProductSpec
 from app.models.user import User
 
 __all__ = [
@@ -11,6 +11,7 @@ __all__ = [
     "User",
     "Product",
     "ProductSpec",
+    "ProductImage",
     "ChatRoom",
     "ChatMessage",
     "UserActivityLog",

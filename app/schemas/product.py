@@ -1,8 +1,9 @@
 from enum import StrEnum
 from typing import Annotated, Any
 
-from pydantic import AfterValidator, AnyHttpUrl, BaseModel, Field, StringConstraints, field_validator, model_validator
+from pydantic import AfterValidator, BaseModel, Field, StringConstraints, field_validator, model_validator
 
+from app.core.storage import get_storage
 from app.models.enums import ProductCategory, ProductCondition, ProductStatus
 from app.schemas.common import ORMModel, Page, UTCDateTime
 from app.schemas.user import UserPublic
@@ -12,13 +13,12 @@ def Str(max_len: int, min_len: int = 1) -> Any:  # noqa: N802 — reads like a t
     return Annotated[str, StringConstraints(strip_whitespace=True, min_length=min_len, max_length=max_len)]
 
 
-def _https_only(value: AnyHttpUrl) -> AnyHttpUrl:
-    if value.scheme != "https" or len(str(value)) > 2048:
-        raise ValueError("이미지 주소는 2048자 이하의 https URL이어야 합니다.")
-    return value
+def _media_url(key: str) -> str:
+    return get_storage().url(key)
 
 
-HttpsUrl = Annotated[AnyHttpUrl, AfterValidator(_https_only)]
+# DB holds storage keys; responses expose public URLs built from the current storage settings.
+MediaUrl = Annotated[str, AfterValidator(_media_url)]
 
 MAX_PRICE = 1_000_000_000  # 10억원 — sanity cap, well within INT range
 
@@ -49,7 +49,6 @@ class ProductCreate(BaseModel):
     description: Str(5000, 10)
     price: int = Field(ge=0, le=MAX_PRICE)
     condition: ProductCondition
-    thumbnail_url: HttpsUrl | None = None
     trade_location: Str(100) | None = None
     spec: ProductSpecIn | None = None
 
@@ -57,7 +56,7 @@ class ProductCreate(BaseModel):
 class ProductUpdate(BaseModel):
     """Partial update: only fields present in the request body are changed.
 
-    - thumbnail_url / trade_location may be set to null to clear them.
+    - trade_location may be set to null to clear it. Photos are managed via /products/{id}/images.
     - spec: send an object to update only the given spec fields, or null to remove all specs.
     """
 
@@ -65,7 +64,6 @@ class ProductUpdate(BaseModel):
     description: Str(5000, 10) | None = None
     price: int | None = Field(default=None, ge=0, le=MAX_PRICE)
     condition: ProductCondition | None = None
-    thumbnail_url: HttpsUrl | None = None
     trade_location: Str(100) | None = None
     spec: ProductSpecIn | None = None
 
@@ -97,6 +95,19 @@ class ProductSpecOut(ORMModel):
     extra_specs: dict[str, Any] | None
 
 
+class ProductImageOut(ORMModel):
+    id: int
+    url: MediaUrl = Field(validation_alias="storage_key")
+    thumbnail_url: MediaUrl = Field(validation_alias="thumb_key")
+    width: int
+    height: int
+    sort_order: int
+
+
+class ImageOrderUpdate(BaseModel):
+    image_ids: list[int] = Field(min_length=1, max_length=50, description="원하는 순서대로 모든 이미지 id")
+
+
 class ProductSummary(ORMModel):
     """List item: enough for a card in search results."""
 
@@ -107,7 +118,7 @@ class ProductSummary(ORMModel):
     condition: ProductCondition
     status: ProductStatus
     is_hot_deal: bool
-    thumbnail_url: str | None
+    thumbnail_url: MediaUrl | None = Field(validation_alias="thumbnail_key", description="첫 번째 사진의 썸네일")
     trade_location: str | None
     view_count: int
     created_at: UTCDateTime
@@ -116,6 +127,7 @@ class ProductSummary(ORMModel):
 
 class ProductDetail(ProductSummary):
     description: str
+    images: list[ProductImageOut]
     updated_at: UTCDateTime
     seller: UserPublic
 

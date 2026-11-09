@@ -82,7 +82,19 @@ Swagger UI: `http://localhost:8000/docs` (우측 상단 Authorize에 access_toke
 | PATCH | `/api/v1/products/{id}` | ✅ 본인 | 부분 수정 (보낸 항목만 변경, `spec: null`이면 스펙 삭제) |
 | PATCH | `/api/v1/products/{id}/status` | ✅ 본인 | `on_sale` / `reserved` / `sold` / `hidden` |
 | DELETE | `/api/v1/products/{id}` | ✅ 본인 | 소프트 삭제 (DB 행 유지, API에서 제외) |
+| POST | `/api/v1/products/{id}/images` | ✅ 본인 | 사진 업로드 (multipart `files`, 여러 장) |
+| DELETE | `/api/v1/products/{id}/images/{image_id}` | ✅ 본인 | 사진 삭제 |
+| PUT | `/api/v1/products/{id}/images/order` | ✅ 본인 | 사진 순서 변경 (첫 번째가 대표 사진) |
 | GET | `/api/v1/users/me/products` | ✅ | 내 판매 상품 (숨김·판매완료 포함, `status` 필터) |
+
+### 상품 사진
+
+- JPG/PNG/WebP만 허용. 확장자·Content-Type이 아니라 실제 파일 내용을 Pillow로 디코딩해 판별한다.
+- 장당 10MB, 상품당 10장, 40MP 초과(압축 폭탄) 거부. 한 장이라도 잘못되면 전체를 저장하지 않는다.
+- WebP로 재인코딩(원본 최대 1600px, 썸네일 400px)하면서 **EXIF(GPS 위치 포함)를 제거**하고 회전값은 적용한다.
+- DB에는 저장 키(`products/{id}/{uuid}.webp`)만 저장하고 URL은 `MEDIA_BASE_URL`로 만든다.
+  지금은 로컬 `media/` 폴더(개발 서버가 `/media`로 제공), 운영에서는 `app/core/storage.py`의 백엔드를 S3 등으로 교체한다.
+- 운영 환경에서는 리버스 프록시에서도 요청 크기를 제한한다 (예: nginx `client_max_body_size 100m`).
 
 ### Redis (Memurai 4 / Redis 7 호환, 포트 6379)
 

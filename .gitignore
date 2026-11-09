@@ -8,3 +8,6 @@ venv/
 .ruff_cache/
 .idea/
 .vscode/
+
+# Uploaded media (local storage backend)
+media/

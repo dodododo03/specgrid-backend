@@ -8,7 +8,6 @@ from tests.conftest import API, signup_and_login
 GPU_4080 = {
     "category": "gpu", "title": "RTX 4080 FE 풀박스", "description": "채굴 X, 게임용으로만 사용했습니다.",
     "price": 1_200_000, "condition": "like_new", "trade_location": "서울 용산구",
-    "thumbnail_url": "https://cdn.specgrid.kr/p/4080.jpg",
     "spec": {"manufacturer": "NVIDIA", "gpu_model": "GeForce RTX 4080", "vram_gb": 16, "extra_specs": {"tdp_w": 320}},
 }
 
@@ -49,8 +48,6 @@ def test_create_without_spec(client, auth_headers):
         {"description": "짧음"},
         {"category": "car"},
         {"condition": "brand_new"},
-        {"thumbnail_url": "http://insecure.example.com/a.jpg"},
-        {"thumbnail_url": "javascript:alert(1)"},
         {"spec": {"vram_gb": 0}},
         {"is_hot_deal": True, "price": -5},
     ],

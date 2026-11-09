@@ -54,7 +54,7 @@ def test_spec_can_be_removed_and_added_back(client, auth_headers, product):
         {"title": None},                       # required field cannot be cleared
         {"price": None},
         {"price": -1},
-        {"thumbnail_url": "http://insecure.example.com/a.jpg"},
+        {"thumbnail_url": "https://x.example/a.jpg"},   # photos are managed via /images, field ignored -> empty
         {"category": "laptop"},                # category is immutable -> ignored -> body is empty
     ],
 )
