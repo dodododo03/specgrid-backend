@@ -57,8 +57,13 @@ def get_auth_context(
 ) -> AuthContext:
     if credentials is None:
         raise AuthenticationError("로그인이 필요합니다.")
+    return authenticate_access_token(db, store, credentials.credentials)
+
+
+def authenticate_access_token(db: Session, store: TokenStore, token: str) -> AuthContext:
+    """Shared by the HTTP bearer dependency and the chat WebSocket handshake."""
     try:
-        claims = decode_token(credentials.credentials, "access")
+        claims = decode_token(token, "access")
     except TokenError as exc:
         raise AuthenticationError(_INVALID) from exc
     if not store.is_access_token_active(claims):  # logged out, or "logout everywhere" happened

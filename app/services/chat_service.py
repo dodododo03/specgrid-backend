@@ -183,15 +183,14 @@ def send_message(db: Session, room_id: int, sender: User, content: str) -> ChatM
     )
     if room is None:
         raise NotFoundError(ROOM_NOT_FOUND)
-    partner_id = room.seller_id if room.buyer_id == sender.id else room.buyer_id
-    partner = db.get(User, partner_id)
+    partner = db.get(User, partner_id(room, sender.id))
     if partner is None or partner.status != UserStatus.ACTIVE:
         db.rollback()
         raise ConflictError("탈퇴했거나 이용이 제한된 사용자에게는 메시지를 보낼 수 없습니다.")
 
     now = _now()
     message = ChatMessage(
-        room_id=room.id, sender_id=sender.id, message_type=MessageType.TEXT, content=content,
+        room=room, sender_id=sender.id, message_type=MessageType.TEXT, content=content,
         is_read=False, created_at=now,
     )
     db.add(message)
@@ -200,9 +199,9 @@ def send_message(db: Session, room_id: int, sender: User, content: str) -> ChatM
     return message
 
 
-def mark_read(db: Session, room_id: int, user: User) -> int:
-    """Mark everything the partner sent in this room as read. Returns how many changed."""
-    get_room(db, room_id, user)
+def mark_read(db: Session, room_id: int, user: User) -> tuple[ChatRoom, int]:
+    """Mark everything the partner sent in this room as read. Returns (room, how many changed)."""
+    room = get_room(db, room_id, user)
     result = db.execute(
         update(ChatMessage)
         .where(
@@ -214,4 +213,8 @@ def mark_read(db: Session, room_id: int, user: User) -> int:
         .execution_options(synchronize_session=False)
     )
     db.commit()
-    return result.rowcount
+    return room, result.rowcount
+
+
+def partner_id(room: ChatRoom, user_id: int) -> int:
+    return room.seller_id if room.buyer_id == user_id else room.buyer_id
