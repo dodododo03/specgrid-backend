@@ -53,3 +53,14 @@ class ActivityType(StrEnum):
     CHAT = "chat"
     TRADE = "trade"
     FAVORITE = "favorite"
+
+
+class TradeStatus(StrEnum):
+    REQUESTED = "requested"  # 구매 요청 (판매자 응답 대기)
+    ACCEPTED = "accepted"    # 판매자 수락 -> 상품 예약중
+    REJECTED = "rejected"    # 판매자 거절 (또는 다른 사람과 거래 완료되어 자동 거절)
+    CANCELED = "canceled"    # 구매자 취소, 또는 수락 후 판매자 취소
+    COMPLETED = "completed"  # 거래 완료 -> 상품 판매완료
+
+
+ACTIVE_TRADE_STATUSES = (TradeStatus.REQUESTED, TradeStatus.ACCEPTED)

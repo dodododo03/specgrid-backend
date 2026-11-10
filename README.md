@@ -93,6 +93,14 @@ Swagger UI: `http://localhost:8000/docs` (우측 상단 Authorize에 access_toke
 | GET | `/api/v1/chat/rooms/{id}/messages` | ✅ 참여자 | 메시지 목록: 기본 최신 30개, `before_id`(이전 메시지), `after_id`(새 메시지), `limit` |
 | POST | `/api/v1/chat/rooms/{id}/messages` | ✅ 참여자 | `{"content": "..."}` 메시지 전송 (1~1000자) |
 | POST | `/api/v1/chat/rooms/{id}/read` | ✅ 참여자 | 상대가 보낸 메시지 모두 읽음 처리 |
+| WS | `/api/v1/chat/ws` | 첫 메시지 | 실시간 수신 (아래 '채팅' 참고) |
+| POST | `/api/v1/trades` | ✅ | `{"product_id": 7, "message": "..."}` 구매 요청 |
+| GET | `/api/v1/trades` | ✅ | 내 거래 목록: `role`(buyer/seller), `status`, `product_id`, `page`, `size` |
+| GET | `/api/v1/trades/{id}` | ✅ 참여자 | 거래 상세 |
+| POST | `/api/v1/trades/{id}/accept` | ✅ 판매자 | 수락 → 상품 `reserved` |
+| POST | `/api/v1/trades/{id}/reject` | ✅ 판매자 | 거절 |
+| POST | `/api/v1/trades/{id}/complete` | ✅ 판매자 | 거래 완료 → 상품 `sold`, 다른 대기 요청 자동 거절 |
+| POST | `/api/v1/trades/{id}/cancel` | ✅ 참여자 | 구매자: 대기·예약 중 취소 / 판매자: 예약 후 취소 → 상품 `on_sale` |
 
 ### 채팅
 
@@ -100,7 +108,28 @@ Swagger UI: `http://localhost:8000/docs` (우측 상단 Authorize에 access_toke
   이미 있는 방은 상품이 삭제돼도 유지되며 `product.is_deleted`로 표시된다.
 - 참여자가 아닌 사용자에게는 방이 존재하지 않는 것처럼 404를 돌려준다 (방 id 추측 방지).
 - 메시지는 id 기준 커서 페이지네이션이며 항상 오래된 순으로 반환한다. 탈퇴·정지된 상대에게는 보낼 수 없다(409).
-- 현재는 REST(폴링: `after_id`)로 동작한다. 실시간 푸시(WebSocket + Redis Pub/Sub)는 다음 단계.
+- 실시간 수신: `ws://<host>/api/v1/chat/ws` 연결 후 10초 안에 `{"type":"auth","token":"<access_token>"}` 전송
+  → `ready` 응답 후 `message` / `read` / `trade` 이벤트가 푸시된다. 보내기는 REST로 한다.
+  토큰은 쿼리스트링이 아니라 첫 메시지로 받는다 (액세스 로그에 토큰이 남지 않도록). 만료·로그아웃 시 4401로 종료.
+- 이벤트는 Redis Pub/Sub(`specgrid:{db}:chat:user:{user_id}`)로 전달되어 여러 서버 프로세스에서도 동작한다.
+  전달은 best-effort이고 DB가 원본이므로, 재연결한 클라이언트는 `after_id`로 놓친 메시지를 가져온다.
+
+### 거래 (구매 흐름)
+
+```
+requested ──accept──▶ accepted ──complete──▶ completed      상품: on_sale → reserved → sold
+    ├─reject──▶ rejected   └─cancel──▶ canceled (상품 다시 on_sale)
+    └─cancel──▶ canceled
+```
+
+- 요청은 판매중 상품에만, 구매자당 상품별 진행 중 요청 1개. 여러 구매자가 동시에 요청할 수 있고 판매자가 하나를 수락한다.
+- 가격은 요청 시점 값으로 저장된다. 예약중인 상품은 수동 상태 변경·삭제가 막힌다(409). 삭제 시 대기 요청은 자동 거절.
+- **동시성 방어 3단계**: ① Redis 분산 락 `specgrid:lock:product:{id}` (TTL 10초, 최대 3초 대기 후 409)
+  ② 트랜잭션 안에서 상품 행 `SELECT ... FOR UPDATE` (항상 상품 → 거래 순으로 잠가 데드락 방지)
+  ③ DB 유니크 인덱스(생성 컬럼): 상품당 accepted 1건, 구매자·상품당 진행 중 요청 1건.
+- 상태가 바뀔 때마다 구매자·판매자에게 WebSocket `{"type":"trade","trade":{...}}` 이벤트를 보낸다.
+- MariaDB 11.6+의 `innodb_snapshot_isolation` 때문에, 락을 잡기 전에 읽기 트랜잭션을 끝내고 새로 시작한다
+  (`trade_service._end_read_snapshot`). 그래도 남는 DB 충돌(1020/1205/1213)은 500이 아니라 409로 응답한다.
 
 ### 상품 사진
 
@@ -119,6 +148,8 @@ Swagger UI: `http://localhost:8000/docs` (우측 상단 Authorize에 access_toke
 | `specgrid:auth:revoked:{jti}` | 로그아웃한 access 토큰 (TTL = 토큰 만료) |
 | `specgrid:auth:gen:{user_id}` | 토큰 세대 번호. logout-all 시 증가 → 이전 토큰 전부 무효 |
 | `specgrid:login_fail:email:{sha256}` / `:ip:{ip}` | 로그인 실패 카운터 (이메일 5회 / IP 30회, 15분) |
+| `specgrid:lock:product:{id}` | 상품별 거래 분산 락 (TTL 10초, 소유자만 해제) |
+| `specgrid:{db}:chat:user:{id}` (Pub/Sub 채널) | 사용자별 실시간 이벤트 |
 
 Redis에 연결할 수 없으면 인증이 필요한 요청과 로그인은 503으로 거부한다 (fail closed). 공개 상품 조회는 영향 없음.
 리버스 프록시 뒤에서는 `uvicorn --proxy-headers --forwarded-allow-ips=<프록시 IP>`로 실행해야 IP 제한이 실제 클라이언트 IP로 동작한다.
@@ -160,4 +191,5 @@ alembic upgrade head
 | product_specs | manufacturer, cpu_model, cpu_cores, ram_gb, gpu_model, vram_gb, storage_gb, extra_specs(JSON) | product_id → products (1:1, CASCADE) |
 | chat_rooms | last_message_at, UQ(product_id, buyer_id), CHECK buyer≠seller | product, buyer, seller |
 | chat_messages | message_type, content, is_read, IX(room_id, id) | room_id → chat_rooms (CASCADE), sender_id → users |
+| trades | price(요청 시점), status, message, responded_at, completed_at, 생성 컬럼 active_buyer_id / accepted_product_id (UQ) | product_id → products, buyer_id / seller_id → users |
 | user_activity_logs | activity_type, session_id(비로그인), search_keyword, detail(JSON), ip, UA | user_id·product_id → SET NULL |

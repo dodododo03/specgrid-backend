@@ -1,7 +1,7 @@
 from sqlalchemy import Select, func, select, update
 from sqlalchemy.orm import Session, joinedload
 
-from app.core.exceptions import NotFoundError, PermissionDeniedError
+from app.core.exceptions import ConflictError, NotFoundError, PermissionDeniedError
 from app.models import Product, ProductSpec, User
 from app.models.enums import ProductStatus
 from app.schemas.product import (
@@ -12,8 +12,10 @@ from app.schemas.product import (
     ProductStatusUpdate,
     ProductUpdate,
 )
+from app.services import trade_service
 
 NOT_FOUND = "상품을 찾을 수 없습니다."
+IN_TRADE = "예약중인 거래가 있습니다. 거래를 완료하거나 취소한 뒤 다시 시도해 주세요."
 
 _ORDER_BY = {
     ProductSort.LATEST: (Product.created_at.desc(), Product.id.desc()),
@@ -110,6 +112,10 @@ def update_product(db: Session, product_id: int, user: User, data: ProductUpdate
 
 def change_status(db: Session, product_id: int, user: User, data: ProductStatusUpdate) -> Product:
     product = get_owned_for_update(db, product_id, user)
+    # The row lock above also serializes us with trade_service, which locks the same row.
+    if data.status != product.status and trade_service.has_accepted_trade(db, product_id):
+        db.rollback()
+        raise ConflictError(IN_TRADE)  # reserved/sold must follow the trade, not be set by hand
     product.status = data.status
     db.commit()
     return load_detail(db, product_id, public_only=False)
@@ -118,6 +124,10 @@ def change_status(db: Session, product_id: int, user: User, data: ProductStatusU
 def delete_product(db: Session, product_id: int, user: User) -> None:
     """Soft delete: the row stays for chat/activity history but disappears everywhere in the API."""
     product = get_owned_for_update(db, product_id, user)
+    if trade_service.has_accepted_trade(db, product_id):
+        db.rollback()
+        raise ConflictError(IN_TRADE)
+    trade_service.reject_open_requests(db, product_id)
     product.deleted_at = func.now()
     db.commit()
 

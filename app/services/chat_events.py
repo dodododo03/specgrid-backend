@@ -10,6 +10,7 @@ saved, and clients catch up with GET /chat/rooms/{id}/messages?after_id=<last id
 Events (JSON):
   {"type": "message", "room_id": 5, "message": {...MessageOut...}}   -> both participants
   {"type": "read", "room_id": 5, "reader_id": 9}                     -> the other participant
+  {"type": "trade", "trade": {...TradeOut...}}                       -> buyer and seller
 """
 
 import json

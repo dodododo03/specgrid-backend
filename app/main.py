@@ -4,6 +4,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
+from sqlalchemy.exc import OperationalError
 
 from app.api.v1.router import api_router
 from app.core.config import settings
@@ -21,6 +22,24 @@ async def handle_app_error(_: Request, exc: AppError) -> JSONResponse:
         content={"code": exc.code, "message": exc.message},
         headers=headers,
     )
+
+
+# MariaDB errors that mean "another transaction got there first", not a bug: the client may retry.
+_RETRYABLE_DB_ERRORS = {
+    1020,  # record changed since last read (innodb_snapshot_isolation)
+    1205,  # lock wait timeout
+    1213,  # deadlock
+}
+
+
+async def handle_db_operational_error(_: Request, exc: OperationalError) -> JSONResponse:
+    code = exc.orig.args[0] if exc.orig is not None and exc.orig.args else None
+    if code in _RETRYABLE_DB_ERRORS:
+        return JSONResponse(
+            status_code=409,
+            content={"code": "conflict", "message": "동시에 처리 중인 요청과 충돌했습니다. 다시 시도해 주세요."},
+        )
+    raise exc  # anything else (DB down, etc.) stays a 500
 
 
 def _mark_binary_fields(node: object) -> None:
@@ -70,6 +89,7 @@ def create_app() -> FastAPI:
         )
 
     app.add_exception_handler(AppError, handle_app_error)
+    app.add_exception_handler(OperationalError, handle_db_operational_error)
     app.include_router(api_router, prefix=settings.api_v1_prefix)
     _install_openapi_fix(app)
 
