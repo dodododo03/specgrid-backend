@@ -36,6 +36,6 @@ class UserActivityLog(CreatedAtMixin, Base):
         BigInteger, ForeignKey("products.id", ondelete="SET NULL"), index=True
     )
     search_keyword: Mapped[str | None] = mapped_column(String(200))
-    detail: Mapped[dict[str, Any] | None] = mapped_column(JSON)
+    detail: Mapped[dict[str, Any] | None] = mapped_column(JSON(none_as_null=True))  # None -> SQL NULL, not "null"
     ip_address: Mapped[str | None] = mapped_column(String(45))  # fits IPv6
     user_agent: Mapped[str | None] = mapped_column(String(512))
