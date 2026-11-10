@@ -2,7 +2,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Path, Query, Response, status
 
-from app.api.deps import CurrentUser, DbSession
+from app.api.deps import Activity, CurrentUser, DbSession, ViewerDep
 from app.schemas.common import Page
 from app.schemas.product import (
     ProductCreate,
@@ -26,14 +26,26 @@ def create_product(data: ProductCreate, user: CurrentUser, db: DbSession):
 
 
 @router.get("", response_model=Page[ProductSummary], summary="상품 검색 (스펙 필터)")
-def search_products(params: Annotated[ProductSearchParams, Query()], db: DbSession):
+def search_products(
+    params: Annotated[ProductSearchParams, Query()], db: DbSession, viewer: ViewerDep, activity: Activity
+):
     items, total = product_service.search_products(db, params)
+    if params.q and params.page == 1:  # paging through results isn't a new search
+        activity.record_search(params.q, viewer, {"category": params.category, "total": total})
     return product_page(items, total, params.page, params.size)
 
 
-@router.get("/{product_id}", response_model=ProductDetail, summary="상품 상세 (조회수 +1)")
-def get_product(product_id: ProductId, db: DbSession):
-    return product_service.get_product(db, product_id)
+@router.get(
+    "/{product_id}",
+    response_model=ProductDetail,
+    summary="상품 상세 (조회수 +1)",
+    description="같은 사람이 30분 안에 다시 보거나 판매자 본인이 보면 조회수가 오르지 않습니다.",
+)
+def get_product(product_id: ProductId, db: DbSession, viewer: ViewerDep, activity: Activity):
+    product = product_service.get_public_product(db, product_id)
+    if activity.record_view(product, viewer):
+        product = product_service.increment_view_count(db, product_id)
+    return product
 
 
 @router.patch("/{product_id}", response_model=ProductDetail, summary="상품 수정 (보낸 항목만 변경)")

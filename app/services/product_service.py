@@ -61,17 +61,20 @@ def load_detail(db: Session, product_id: int, *, public_only: bool) -> Product:
     return product
 
 
-def get_product(db: Session, product_id: int) -> Product:
-    """Public detail view. Increments view_count atomically in the DB (no lost updates)."""
-    result = db.execute(
+def get_public_product(db: Session, product_id: int) -> Product:
+    """Public detail view (404 for missing / hidden / deleted). Doesn't touch view_count."""
+    return load_detail(db, product_id, public_only=True)
+
+
+def increment_view_count(db: Session, product_id: int) -> Product:
+    """Atomic +1 in the DB (no lost updates under concurrent views), then the fresh row."""
+    db.execute(
         update(Product)
-        .where(Product.id == product_id, *_visible())
+        .where(Product.id == product_id)
         .values(view_count=Product.view_count + 1)
         .execution_options(synchronize_session=False)
     )
     db.commit()
-    if result.rowcount == 0:
-        raise NotFoundError(NOT_FOUND)
     return load_detail(db, product_id, public_only=True)
 
 

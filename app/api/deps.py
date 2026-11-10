@@ -6,12 +6,13 @@ from fastapi import Depends, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
-from app.core.exceptions import AuthenticationError
+from app.core.exceptions import AppError, AuthenticationError
 from app.core.redis import get_redis
 from app.core.security import TokenClaims, TokenError, decode_token
 from app.db.session import get_db
 from app.models import User
 from app.models.enums import UserStatus
+from app.services.activity_service import ActivityRecorder, Viewer
 from app.services.login_limiter import LoginLimiter
 from app.services.token_store import TokenStore
 
@@ -80,3 +81,44 @@ def get_current_user(auth: Annotated[AuthContext, Depends(get_auth_context)]) ->
 
 CurrentAuth = Annotated[AuthContext, Depends(get_auth_context)]
 CurrentUser = Annotated[User, Depends(get_current_user)]
+
+
+def get_optional_user(
+    db: DbSession,
+    store: TokenStoreDep,
+    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_bearer)],
+) -> User | None:
+    """For public endpoints: the logged-in user if a valid token was sent, otherwise None.
+
+    A bad/expired token (or Redis being down) just means "anonymous" here, never an error.
+    """
+    if credentials is None:
+        return None
+    try:
+        return authenticate_access_token(db, store, credentials.credentials).user
+    except AppError:
+        return None
+
+
+OptionalUser = Annotated[User | None, Depends(get_optional_user)]
+
+
+def get_viewer(request: Request, ip: ClientIp, user: OptionalUser) -> Viewer:
+    ua = request.headers.get("user-agent")
+    return Viewer(user_id=user.id if user else None, ip=ip, user_agent=ua[:512] if ua else None)
+
+
+def get_current_viewer(request: Request, ip: ClientIp, user: CurrentUser) -> Viewer:
+    ua = request.headers.get("user-agent")
+    return Viewer(user_id=user.id, ip=ip, user_agent=ua[:512] if ua else None)
+
+
+ViewerDep = Annotated[Viewer, Depends(get_viewer)]
+CurrentViewer = Annotated[Viewer, Depends(get_current_viewer)]
+
+
+def get_activity(db: DbSession, client: RedisClient) -> ActivityRecorder:
+    return ActivityRecorder(db, client)
+
+
+Activity = Annotated[ActivityRecorder, Depends(get_activity)]

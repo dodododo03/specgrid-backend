@@ -11,7 +11,9 @@ from sqlalchemy.orm import Session
 from starlette.websockets import WebSocketState
 
 from app.api.deps import (
+    Activity,
     AuthContext,
+    CurrentViewer,
     CurrentUser,
     DbSession,
     RedisClient,
@@ -21,6 +23,7 @@ from app.api.deps import (
 from app.core.config import settings
 from app.core.exceptions import AppError, AuthenticationError
 from app.models import ChatMessage, ChatRoom, User
+from app.models.enums import ActivityType
 from app.schemas.chat import (
     ChatProduct,
     ChatRoomCreate,
@@ -77,9 +80,14 @@ def _single_room_out(db: Session, room: ChatRoom, me: User) -> ChatRoomOut:
     summary="상품 판매자와 채팅 시작 (이미 있으면 기존 방)",
     responses={201: {"description": "새 채팅방 생성"}, 200: {"description": "기존 채팅방 반환"}},
 )
-def open_room(data: ChatRoomCreate, user: CurrentUser, db: DbSession, response: Response):
+def open_room(
+    data: ChatRoomCreate, user: CurrentUser, db: DbSession, response: Response,
+    viewer: CurrentViewer, activity: Activity,
+):
     room, created = chat_service.open_room(db, user, data.product_id)
     response.status_code = status.HTTP_201_CREATED if created else status.HTTP_200_OK
+    if created:
+        activity.record(ActivityType.CHAT, viewer, product_id=room.product_id, detail={"room_id": room.id})
     return _single_room_out(db, room, user)
 
 

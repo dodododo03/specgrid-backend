@@ -101,6 +101,8 @@ Swagger UI: `http://localhost:8000/docs` (우측 상단 Authorize에 access_toke
 | POST | `/api/v1/trades/{id}/reject` | ✅ 판매자 | 거절 |
 | POST | `/api/v1/trades/{id}/complete` | ✅ 판매자 | 거래 완료 → 상품 `sold`, 다른 대기 요청 자동 거절 |
 | POST | `/api/v1/trades/{id}/cancel` | ✅ 참여자 | 구매자: 대기·예약 중 취소 / 판매자: 예약 후 취소 → 상품 `on_sale` |
+| GET | `/api/v1/rankings/keywords` | | 인기 검색어: `period`(day/week/month), `limit` |
+| GET | `/api/v1/rankings/products` | | 많이 본 상품: `period`(day/week/month/all), `category`, `include_sold`, `limit` |
 
 ### 채팅
 
@@ -130,6 +132,25 @@ requested ──accept──▶ accepted ──complete──▶ completed      
 - 상태가 바뀔 때마다 구매자·판매자에게 WebSocket `{"type":"trade","trade":{...}}` 이벤트를 보낸다.
 - MariaDB 11.6+의 `innodb_snapshot_isolation` 때문에, 락을 잡기 전에 읽기 트랜잭션을 끝내고 새로 시작한다
   (`trade_service._end_read_snapshot`). 그래도 남는 DB 충돌(1020/1205/1213)은 500이 아니라 409로 응답한다.
+
+### 활동 로그 · 랭킹
+
+- `user_activity_logs`에 조회(view)·검색(search)·채팅 시작(chat)·거래 단계(trade)를 기록한다. 채팅 내용은 저장하지 않는다.
+- 로그 저장 실패는 서버 로그에만 남기고 사용자 요청은 그대로 성공시킨다 (best-effort).
+- **어뷰징 방지**: 같은 사람(로그인 사용자 id, 비로그인은 IP+User-Agent)의 같은 상품 조회는 30분, 같은 검색어는 10분에 1번만 센다.
+  판매자 본인 조회는 세지 않는다. `products.view_count`도 같은 규칙. (Redis `specgrid:seen:*`, Redis 장애 시엔 그냥 센다)
+- 검색어는 소문자 + 공백 정리 후 저장(`"  RTX  4080"` → `"rtx 4080"`). 키워드 없는 필터 검색과 2페이지 이후는 기록하지 않는다.
+- 랭킹은 DB 집계(`GROUP BY` + `COUNT`)로 계산하고 Redis에 60초 캐시한다(`specgrid:ranking:*`).
+  커버링 인덱스 `(activity_type, created_at, search_keyword | product_id)`로 기간 범위만 인덱스에서 읽는다.
+- 상품 공개 API는 토큰이 있으면 로그인 사용자로, 없거나 잘못됐으면 비로그인으로 기록한다 (에러 없음).
+
+샘플 데이터 (개발 DB 전용, `detail.seed=true`로 표시되어 따로 지울 수 있음):
+
+```bash
+python -m scripts.seed_activity                         # 검색 300 + 조회 600건 (최근 7일)
+python -m scripts.seed_activity --searches 1000 --views 3000 --days 30
+python -m scripts.seed_activity --clear                 # 샘플만 삭제
+```
 
 ### 상품 사진
 

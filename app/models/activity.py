@@ -19,7 +19,9 @@ class UserActivityLog(CreatedAtMixin, Base):
     __tablename__ = "user_activity_logs"
     __table_args__ = (
         Index("ix_user_activity_logs_user_id_created_at", "user_id", "created_at"),
-        Index("ix_user_activity_logs_activity_type_created_at", "activity_type", "created_at"),
+        # Covering indexes for the rankings: time-window scan + GROUP BY without touching the table.
+        Index("ix_user_activity_logs_type_created_keyword", "activity_type", "created_at", "search_keyword"),
+        Index("ix_user_activity_logs_type_created_product", "activity_type", "created_at", "product_id"),
     )
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)

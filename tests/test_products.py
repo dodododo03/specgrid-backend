@@ -65,10 +65,33 @@ def test_seller_cannot_self_promote_to_hot_deal(client, auth_headers):
 # ------------------------------------------------------------------ detail
 
 
+def visit(client, pid, visitor="browser-1"):
+    """Anonymous visitors are told apart by IP + User-Agent; vary the UA to simulate different people."""
+    return client.get(f"{API}/products/{pid}", headers={"User-Agent": visitor})
+
+
 def test_detail_increments_view_count(client, auth_headers):
     pid = create(client, auth_headers)["id"]
-    assert client.get(f"{API}/products/{pid}").json()["view_count"] == 1
-    assert client.get(f"{API}/products/{pid}").json()["view_count"] == 2
+    assert visit(client, pid, "a").json()["view_count"] == 1
+    assert visit(client, pid, "b").json()["view_count"] == 2
+
+
+def test_repeat_views_by_same_visitor_count_once(client, auth_headers):
+    pid = create(client, auth_headers)["id"]
+    for _ in range(5):
+        r = visit(client, pid, "refresh-spammer")
+    assert r.json()["view_count"] == 1
+
+
+def test_seller_own_views_do_not_count(client, auth_headers):
+    pid = create(client, auth_headers)["id"]
+    assert client.get(f"{API}/products/{pid}", headers=auth_headers).json()["view_count"] == 0
+
+
+def test_invalid_token_on_public_detail_is_just_anonymous(client, auth_headers):
+    pid = create(client, auth_headers)["id"]
+    r = client.get(f"{API}/products/{pid}", headers={"Authorization": "Bearer garbage"})
+    assert r.status_code == 200 and r.json()["view_count"] == 1
 
 
 def test_detail_404_for_missing_hidden_or_deleted(client, auth_headers, db):
@@ -164,9 +187,9 @@ def test_sort_and_pagination(client, catalog):
 
 
 def test_popular_sort_uses_view_count(client, catalog):
-    for _ in range(3):
-        client.get(f"{API}/products/{catalog['server']}")
-    client.get(f"{API}/products/{catalog['keyboard']}")
+    for who in ("a", "b", "c"):
+        visit(client, catalog["server"], who)
+    visit(client, catalog["keyboard"], "a")
     assert names(search(client, sort="popular"), catalog)[:2] == ["server", "keyboard"]
 
 
