@@ -70,6 +70,10 @@ class Product(TimestampMixin, Base):
     )
 
     @property
+    def is_deleted(self) -> bool:
+        return self.deleted_at is not None
+
+    @property
     def thumbnail_key(self) -> str | None:
         """The first image is the cover shown in listings."""
         return self.images[0].thumb_key if self.images else None

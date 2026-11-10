@@ -86,6 +86,21 @@ Swagger UI: `http://localhost:8000/docs` (우측 상단 Authorize에 access_toke
 | DELETE | `/api/v1/products/{id}/images/{image_id}` | ✅ 본인 | 사진 삭제 |
 | PUT | `/api/v1/products/{id}/images/order` | ✅ 본인 | 사진 순서 변경 (첫 번째가 대표 사진) |
 | GET | `/api/v1/users/me/products` | ✅ | 내 판매 상품 (숨김·판매완료 포함, `status` 필터) |
+| POST | `/api/v1/chat/rooms` | ✅ | `{"product_id": 7}` 판매자와 채팅 시작. 새 방 201, 이미 있으면 기존 방 200 |
+| GET | `/api/v1/chat/rooms` | ✅ | 내 채팅방 목록 (최근 대화순, 상대방·마지막 메시지·안 읽은 수 포함) |
+| GET | `/api/v1/chat/unread-count` | ✅ | 안 읽은 메시지 총 개수 (배지용) |
+| GET | `/api/v1/chat/rooms/{id}` | ✅ 참여자 | 채팅방 정보 |
+| GET | `/api/v1/chat/rooms/{id}/messages` | ✅ 참여자 | 메시지 목록: 기본 최신 30개, `before_id`(이전 메시지), `after_id`(새 메시지), `limit` |
+| POST | `/api/v1/chat/rooms/{id}/messages` | ✅ 참여자 | `{"content": "..."}` 메시지 전송 (1~1000자) |
+| POST | `/api/v1/chat/rooms/{id}/read` | ✅ 참여자 | 상대가 보낸 메시지 모두 읽음 처리 |
+
+### 채팅
+
+- 방은 (상품, 구매자)당 하나. 본인 상품·판매완료(409)·숨김/삭제(404) 상품에는 새 방을 만들 수 없다.
+  이미 있는 방은 상품이 삭제돼도 유지되며 `product.is_deleted`로 표시된다.
+- 참여자가 아닌 사용자에게는 방이 존재하지 않는 것처럼 404를 돌려준다 (방 id 추측 방지).
+- 메시지는 id 기준 커서 페이지네이션이며 항상 오래된 순으로 반환한다. 탈퇴·정지된 상대에게는 보낼 수 없다(409).
+- 현재는 REST(폴링: `after_id`)로 동작한다. 실시간 푸시(WebSocket + Redis Pub/Sub)는 다음 단계.
 
 ### 상품 사진
 
