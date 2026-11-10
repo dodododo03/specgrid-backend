@@ -21,7 +21,7 @@ import redis
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, joinedload
 
-from app.models import Product, UserActivityLog
+from app.models import Favorite, Product, UserActivityLog
 from app.models.enums import ActivityType, ProductCategory, ProductStatus
 
 logger = logging.getLogger(__name__)
@@ -34,6 +34,11 @@ class Period(StrEnum):
     WEEK = "week"    # last 7 days
     MONTH = "month"  # last 30 days
     ALL = "all"      # products only: lifetime products.view_count
+
+
+class Metric(StrEnum):
+    VIEWS = "views"          # 많이 본 상품
+    FAVORITES = "favorites"  # 찜 많은 상품
 
 
 _WINDOWS = {Period.DAY: timedelta(days=1), Period.WEEK: timedelta(days=7), Period.MONTH: timedelta(days=30)}
@@ -79,7 +84,8 @@ def popular_keywords(db: Session, period: Period, limit: int) -> list[tuple[str,
 
 
 def popular_products(
-    db: Session, period: Period, limit: int, category: ProductCategory | None, include_sold: bool
+    db: Session, period: Period, limit: int, category: ProductCategory | None, include_sold: bool,
+    metric: Metric = Metric.VIEWS,
 ) -> list[tuple[Product, int]]:
     visible = [Product.deleted_at.is_(None), Product.status != ProductStatus.HIDDEN]
     if not include_sold:
@@ -87,27 +93,30 @@ def popular_products(
     if category:
         visible.append(Product.category == category)
 
-    if period == Period.ALL:
+    if period == Period.ALL:  # lifetime counters stored on the product row
+        counter = Product.view_count if metric == Metric.VIEWS else Product.favorite_count
         products = db.scalars(
             select(Product)
             .options(joinedload(Product.spec))
-            .where(*visible, Product.view_count > 0)
-            .order_by(Product.view_count.desc(), Product.id.desc())
+            .where(*visible, counter > 0)
+            .order_by(counter.desc(), Product.id.desc())
             .limit(limit)
         ).all()
-        return [(p, p.view_count) for p in products]
+        return [(p, p.view_count if metric == Metric.VIEWS else p.favorite_count) for p in products]
 
-    views = func.count(UserActivityLog.id).label("views")
+    if metric == Metric.VIEWS:
+        id_col, created = UserActivityLog.product_id, UserActivityLog.created_at
+        source = [UserActivityLog.activity_type == ActivityType.VIEW]
+    else:  # favorites added in the window that still exist (un-hearted ones don't count)
+        id_col, created = Favorite.product_id, Favorite.created_at
+        source = []
+    score = func.count().label("score")
     rows = db.execute(
-        select(UserActivityLog.product_id, views)
-        .join(Product, Product.id == UserActivityLog.product_id)
-        .where(
-            UserActivityLog.activity_type == ActivityType.VIEW,
-            UserActivityLog.created_at >= _since(period),
-            *visible,
-        )
-        .group_by(UserActivityLog.product_id)
-        .order_by(views.desc(), UserActivityLog.product_id.desc())
+        select(id_col, score)
+        .join(Product, Product.id == id_col)
+        .where(*source, created >= _since(period), *visible)
+        .group_by(id_col)
+        .order_by(score.desc(), id_col.desc())
         .limit(limit)
     ).all()
     if not rows:

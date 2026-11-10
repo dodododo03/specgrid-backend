@@ -121,6 +121,8 @@ class ProductSummary(ORMModel):
     thumbnail_url: MediaUrl | None = Field(validation_alias="thumbnail_key", description="첫 번째 사진의 썸네일")
     trade_location: str | None
     view_count: int
+    favorite_count: int = Field(description="찜한 사람 수")
+    is_favorited: bool | None = Field(default=None, description="내가 찜했는지 (로그인하지 않았으면 null)")
     created_at: UTCDateTime
     spec: ProductSpecOut | None
 
@@ -132,9 +134,18 @@ class ProductDetail(ProductSummary):
     seller: UserPublic
 
 
-def product_page(items: list[Any], total: int, page: int, size: int) -> Page[ProductSummary]:
+def with_favorite(model: Any, favorited: set[int] | None) -> Any:
+    """Fill is_favorited (None = anonymous viewer, so the client hides the heart state)."""
+    if favorited is not None:
+        model.is_favorited = model.id in favorited
+    return model
+
+
+def product_page(
+    items: list[Any], total: int, page: int, size: int, favorited: set[int] | None = None
+) -> Page[ProductSummary]:
     return Page[ProductSummary](
-        items=[ProductSummary.model_validate(p) for p in items],
+        items=[with_favorite(ProductSummary.model_validate(p), favorited) for p in items],
         total=total,
         page=page,
         size=size,

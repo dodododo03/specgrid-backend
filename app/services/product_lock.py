@@ -24,6 +24,7 @@ logger = logging.getLogger(__name__)
 
 LOCK_TTL_SECONDS = 10   # auto-release if the holder crashes
 LOCK_WAIT_SECONDS = 3   # how long a request waits for its turn before giving up
+LOCK_RETRY_SECONDS = 0.02  # polling interval while waiting (redis-py default 0.1s is sluggish)
 
 BUSY = "다른 거래 요청을 처리하는 중입니다. 잠시 후 다시 시도해 주세요."
 
@@ -39,7 +40,8 @@ class ProductLock:
     @contextmanager
     def hold(self, product_id: int) -> Iterator[None]:
         lock = self.r.lock(
-            lock_key(product_id), timeout=LOCK_TTL_SECONDS, blocking_timeout=LOCK_WAIT_SECONDS
+            lock_key(product_id), timeout=LOCK_TTL_SECONDS, blocking_timeout=LOCK_WAIT_SECONDS,
+            sleep=LOCK_RETRY_SECONDS,
         )
         with redis_guard():  # Redis down -> 503 (fail closed: no unguarded trades)
             acquired = lock.acquire()

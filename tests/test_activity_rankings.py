@@ -43,7 +43,7 @@ def keywords(client, **params):
 def product_ranking(client, **params):
     r = client.get(f"{API}/rankings/products", params=params)
     assert r.status_code == 200, r.text
-    return [(i["product"]["id"], i["views"]) for i in r.json()["items"]]
+    return [(i["product"]["id"], i["count"]) for i in r.json()["items"]]
 
 
 # ------------------------------------------------------------------ logging

@@ -44,18 +44,21 @@ def keyword_ranking(params: Annotated[KeywordRankParams, Query()], db: DbSession
     return result
 
 
-@router.get("/products", response_model=ProductRanking, summary="많이 본 상품 순위")
+@router.get("/products", response_model=ProductRanking, summary="인기 상품 순위 (많이 본 / 찜 많은)")
 def product_ranking(params: Annotated[ProductRankParams, Query()], db: DbSession, cache: Cache):
-    key = (f"specgrid:ranking:products:{params.period}:{params.category or 'all'}:"
+    key = (f"specgrid:ranking:products:{params.metric}:{params.period}:{params.category or 'all'}:"
            f"{int(params.include_sold)}:{params.limit}")
     if (cached := cache.get(key)) is not None:
         return cached
-    rows = ranking_service.popular_products(db, params.period, params.limit, params.category, params.include_sold)
+    rows = ranking_service.popular_products(
+        db, params.period, params.limit, params.category, params.include_sold, params.metric
+    )
     result = ProductRanking(
+        metric=params.metric,
         period=params.period,
         category=params.category,
         items=[
-            ProductRank(rank=i, views=v, product=ProductSummary.model_validate(p))
+            ProductRank(rank=i, count=v, product=ProductSummary.model_validate(p))
             for i, (p, v) in enumerate(rows, start=1)
         ],
         generated_at=datetime.now(UTC),

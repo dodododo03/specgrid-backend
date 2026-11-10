@@ -102,7 +102,10 @@ Swagger UI: `http://localhost:8000/docs` (우측 상단 Authorize에 access_toke
 | POST | `/api/v1/trades/{id}/complete` | ✅ 판매자 | 거래 완료 → 상품 `sold`, 다른 대기 요청 자동 거절 |
 | POST | `/api/v1/trades/{id}/cancel` | ✅ 참여자 | 구매자: 대기·예약 중 취소 / 판매자: 예약 후 취소 → 상품 `on_sale` |
 | GET | `/api/v1/rankings/keywords` | | 인기 검색어: `period`(day/week/month), `limit` |
-| GET | `/api/v1/rankings/products` | | 많이 본 상품: `period`(day/week/month/all), `category`, `include_sold`, `limit` |
+| GET | `/api/v1/rankings/products` | | 인기 상품: `metric`(views=많이 본 / favorites=찜 많은), `period`(day/week/month/all), `category`, `include_sold`, `limit` |
+| PUT | `/api/v1/products/{id}/favorite` | ✅ | 찜하기 (여러 번 보내도 1번) |
+| DELETE | `/api/v1/products/{id}/favorite` | ✅ | 찜 취소 |
+| GET | `/api/v1/users/me/favorites` | ✅ | 내 찜 목록 (최근 찜한 순, 삭제·숨김 제외) |
 
 ### 채팅
 
@@ -132,6 +135,14 @@ requested ──accept──▶ accepted ──complete──▶ completed      
 - 상태가 바뀔 때마다 구매자·판매자에게 WebSocket `{"type":"trade","trade":{...}}` 이벤트를 보낸다.
 - MariaDB 11.6+의 `innodb_snapshot_isolation` 때문에, 락을 잡기 전에 읽기 트랜잭션을 끝내고 새로 시작한다
   (`trade_service._end_read_snapshot`). 그래도 남는 DB 충돌(1020/1205/1213)은 500이 아니라 409로 응답한다.
+
+### 찜
+
+- `favorites` (UQ user_id+product_id) + `products.favorite_count`(비정규화 카운터)를 같은 트랜잭션에서 함께 바꾼다.
+  PUT/DELETE는 멱등: 중복 요청은 에러 없이 무시되고 카운트도 변하지 않는다 (동시 중복 INSERT는 유니크 키가 막음).
+- 본인 상품(400), 판매완료(409), 숨김·삭제(404)는 찜할 수 없다. 찜 취소는 상품 상태와 관계없이 가능.
+- 상품 상세·검색 응답에 `favorite_count`와 `is_favorited`(로그인 시 true/false, 비로그인 null)가 포함된다.
+  검색 결과의 하트 상태는 페이지당 쿼리 1번으로 조회한다.
 
 ### 활동 로그 · 랭킹
 

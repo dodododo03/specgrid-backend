@@ -230,8 +230,13 @@ def test_lock_released_after_request(client, buyer, product, redis_client, trade
     assert redis_client.exists(lock_key(product["id"])) == 0
 
 
-def test_product_lock_is_mutually_exclusive(redis_client):
-    """20 threads fight for one product: never more than one inside the lock at a time."""
+def test_product_lock_is_mutually_exclusive(redis_client, monkeypatch):
+    """20 threads fight for one product: never more than one inside the lock at a time.
+
+    The lock isn't fair (no queue), so an unlucky thread can wait a while; give it a generous
+    wait here, because this test is about mutual exclusion, not about the timeout.
+    """
+    monkeypatch.setattr(product_lock, "LOCK_WAIT_SECONDS", 30)
     locks = ProductLock(redis_client)
     inside = 0
     max_inside = 0

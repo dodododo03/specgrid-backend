@@ -29,6 +29,7 @@ class Product(TimestampMixin, Base):
     __table_args__ = (
         CheckConstraint("price >= 0", name="price_non_negative"),
         CheckConstraint("view_count >= 0", name="view_count_non_negative"),
+        CheckConstraint("favorite_count >= 0", name="favorite_count_non_negative"),
         # Main listing query: category tab + on-sale + newest first
         Index("ix_products_category_status_created_at", "category", "status", "created_at"),
         Index("ix_products_status_price", "status", "price"),
@@ -55,6 +56,8 @@ class Product(TimestampMixin, Base):
     is_hot_deal: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("0"))
     trade_location: Mapped[str | None] = mapped_column(String(100))
     view_count: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("0"))
+    # Denormalized COUNT(*) of favorites, kept in sync in the same transaction (cheap for list cards).
+    favorite_count: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("0"))
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime)  # soft delete
 
     seller: Mapped[User] = relationship(back_populates="products")
