@@ -1,35 +1,38 @@
-# SpecGrid API — 스펙그리드 백엔드
+# SpecGrid — 스펙그리드
 
-전자기기·IT 하드웨어 중고거래 플랫폼 백엔드. FastAPI · SQLAlchemy 2.0 · Alembic · Pydantic v2 · Redis · MariaDB.
+전자기기·IT 하드웨어 중고거래 플랫폼. 백엔드 FastAPI · SQLAlchemy 2.0 · Alembic · Pydantic v2 · Redis · MariaDB,
+프론트엔드는 빌드 과정 없는 HTML/CSS/JavaScript(ES modules)로 같은 서버가 함께 제공한다.
 
 ## 디렉토리 구조
 
 ```
 specgrid-backend/
-├── app/
-│   ├── main.py                 # FastAPI 앱 팩토리 (CORS, 라우터 등록)
-│   ├── core/
-│   │   ├── config.py           # .env 기반 설정 (pydantic-settings)
-│   │   └── redis.py            # Redis 클라이언트 / 의존성
-│   ├── db/
-│   │   ├── base.py             # DeclarativeBase, 제약조건 네이밍 규칙, 타임스탬프 믹스인
-│   │   └── session.py          # 엔진, SessionLocal, get_db 의존성
-│   ├── models/                 # SQLAlchemy 모델 (ERD)
-│   │   ├── enums.py
-│   │   ├── user.py             # users
-│   │   ├── product.py          # products, product_specs
-│   │   ├── chat.py             # chat_rooms, chat_messages
-│   │   └── activity.py         # user_activity_logs
-│   ├── schemas/                # Pydantic 요청/응답 스키마
-│   ├── services/               # 비즈니스 로직
-│   └── api/v1/
-│       ├── router.py
-│       └── endpoints/health.py # GET /api/v1/health (DB·Redis 상태)
-├── alembic/
-│   ├── env.py                  # .env의 DB 설정과 app.models 메타데이터 사용
-│   └── versions/               # 0001_initial_schema
-├── alembic.ini
-├── requirements.txt
+├── app/                        # 백엔드
+│   ├── main.py                 # 앱 생성, 에러 처리, /media·프론트엔드 정적 파일 제공
+│   ├── api/
+│   │   ├── deps.py             # 공통 의존성 (DB 세션, 로그인 사용자, 선택적 로그인, Redis)
+│   │   └── v1/endpoints/       # auth · users · products · product_images · chat(+WebSocket)
+│   │                           # trades · favorites · rankings · health
+│   ├── schemas/                # 요청/응답 모델 (Pydantic)
+│   ├── services/               # 비즈니스 로직 (거래 락, 실시간 이벤트, 활동 로그, 랭킹 …)
+│   ├── models/                 # 테이블 (users, products, chat, trades, favorites, activity)
+│   ├── db/                     # Base, 세션
+│   └── core/                   # 설정, JWT·비밀번호, 에러 타입, Redis, 파일 저장소
+├── frontend/                   # 웹 화면 (http://localhost:8000/)
+│   ├── index.html
+│   ├── css/style.css           # 원본 디자인 시스템 (흑연색 + 시그널 그린)
+│   ├── css/app.css             # 랭킹·채팅·로그인 등 추가 화면 스타일
+│   └── js/
+│       ├── app.js              # 해시 라우터(#/product/7), 헤더, 실시간 알림
+│       ├── api.js              # REST 호출, 토큰 저장·자동 재발급
+│       ├── realtime.js         # WebSocket (자동 재연결, 토큰 만료 시 재발급)
+│       ├── ui.js · icons.js    # 공통 UI (상품 카드, 토스트, XSS 이스케이프), 아이콘
+│       └── views/              # home · product · sell · auth · account · chat · ranking
+├── alembic/versions/           # 마이그레이션 0001~0005
+├── tests/                      # pytest (API, 동시성)
+├── tests_e2e/run_e2e.py        # 실제 크롬으로 전체 화면 흐름 테스트
+├── scripts/                    # init_db.sql, seed_activity.py
+├── requirements.txt / requirements-dev.txt
 └── .env.example
 ```
 
@@ -61,8 +64,22 @@ mariadb -u root -p -h 127.0.0.1 -P 3307 -e "source scripts/init_db.sql"
 ```bash
 alembic upgrade head            # 테이블 생성
 alembic upgrade head --sql      # (선택) DB 없이 실행될 SQL만 확인
-uvicorn app.main:app --reload   # http://localhost:8000/docs
+uvicorn app.main:app --reload
 ```
+
+- 웹 화면: **http://localhost:8000/** (회원가입 → 판매 등록 → 검색·필터 → 채팅 → 구매 요청 → 수락·완료)
+- API 문서(Swagger): http://localhost:8000/docs
+
+## 프론트엔드
+
+- 빌드 도구 없이 브라우저가 바로 읽는 ES 모듈이라 `frontend/` 파일을 고치고 새로고침하면 끝. 서버가 `Cache-Control: no-cache`로
+  제공해 옛 JS가 남지 않는다. API와 같은 주소에서 제공하므로 CORS 설정이 필요 없다.
+- 화면 주소는 `#/` 해시 라우팅: `#/`, `#/?q=rtx`, `#/product/7`, `#/sell`, `#/chat/3`, `#/trades`, `#/favorites`, `#/profile`, `#/ranking`.
+- 로그인 토큰은 `localStorage`에 저장한다. 401이 오면 refresh 토큰으로 **한 번만** 재발급 후 재시도한다
+  (동시에 여러 요청이 401을 받아도 재발급 요청은 1개 — refresh 토큰 재사용으로 오인되어 전체 로그아웃되는 것을 방지).
+- 실시간: 로그인하면 WebSocket에 연결해 새 메시지·읽음·거래 상태를 받는다. 끊기면 지수 백오프로 재연결하고,
+  재연결 후에는 열려 있던 화면이 놓친 데이터를 다시 불러온다.
+- 사용자 입력(상품명, 채팅 등)은 항상 HTML 이스케이프 후 그린다 (e2e에서 `<img onerror>` 메시지로 확인).
 
 ## API
 
@@ -193,7 +210,20 @@ Redis에 연결할 수 없으면 인증이 필요한 요청과 로그인은 503�
 
 ```bash
 pip install -r requirements-dev.txt
-pytest
+pytest                          # API·서비스 테스트 (specgrid_test DB)
+python tests_e2e/run_e2e.py     # 화면 E2E (specgrid_e2e DB, 포트 8001, 설치된 Chrome 사용)
+python tests_e2e/run_e2e.py --headed --shots e2e-shots   # 브라우저가 움직이는 걸 보고, 스크린샷 저장
+```
+
+E2E는 판매자·구매자 브라우저 두 개를 동시에 띄워 가입부터 판매·검색·찜·실시간 채팅·구매 요청·수락·완료·랭킹·
+토큰 자동 재발급·로그아웃·모바일 레이아웃까지 33단계를 확인하고, 어느 브라우저에서든 JS 에러나 5xx가 나면 실패한다.
+실행할 때마다 `specgrid_e2e` DB와 Redis **14번** DB만 비운다 (개발용 0번, pytest용 15번은 건드리지 않음). 최초 1회 root로 E2E DB를 만든다:
+
+```sql
+CREATE DATABASE specgrid_e2e CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, ALTER, DROP, INDEX, REFERENCES ON specgrid_e2e.* TO 'specgrid_migrator'@'localhost';
+GRANT SELECT, INSERT, UPDATE, DELETE ON specgrid_e2e.* TO 'specgrid_app'@'localhost';
+-- 그 다음: DB_NAME=specgrid_e2e alembic upgrade head
 ```
 
 테스트는 개발 DB가 아닌 `specgrid_test` DB에서 실행되며, 테스트마다 트랜잭션을 롤백해 데이터가 남지 않는다.

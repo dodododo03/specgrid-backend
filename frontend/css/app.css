@@ -1,0 +1,314 @@
+/* SpecGrid — styles for screens the original design didn't have (rankings, chat, auth, toasts…)
+   and replacements for the Tailwind utilities the React version used. Same palette:
+   graphite #121816 / panel #19231c / line #303a34 / signal green #39ff88. */
+
+[hidden] { display: none !important; }
+.ic { flex-shrink: 0; vertical-align: middle; }
+.ic.filled { fill: currentColor; }
+.spin { animation: spin 0.9s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.small { font-size: 11px; }
+.center { text-align: center; }
+.link { color: #39ff88; text-decoration: underline; text-underline-offset: 3px; }
+.mobile-only { display: none !important; }
+.live-dot.dim { background: #4d5c52; }
+main { min-height: 60vh; outline: none; }
+select { background: #131d17; color: #e7eee9; border: 1px solid #3b5142; border-radius: 4px; padding: 8px 10px; }
+.btn-danger { background: transparent; color: #ff8a8a; border-color: #6b3b3b; }
+.btn-danger:hover { background: #3a1f1f; color: #ffb0b0; border-color: #ff8a8a; }
+.btn.full { width: 100%; }
+.btn[disabled] { transform: none; }
+.note { display: flex; gap: 8px; align-items: flex-start; line-height: 1.6; margin-top: 14px; }
+.row-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.form-error { color: #ff9a9a; background: #2a1a1a; border: 1px solid #5a3030; border-radius: 4px; padding: 9px 12px; font-size: 12px; margin: 0; }
+.field > span { display: flex; justify-content: space-between; gap: 8px; }
+.field em { font-style: normal; font-size: 10px; }
+.form-stack { display: flex; flex-direction: column; gap: 16px; }
+
+/* ---------------------------------------------------------------- header extras */
+a.user-button { text-decoration: none; }
+.chat-link { position: relative; }
+.unread-badge {
+  position: absolute; top: 2px; right: -6px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px;
+  background: #39ff88; color: #102016; font: 600 9px/16px "IBM Plex Mono", monospace; text-align: center;
+}
+
+/* ---------------------------------------------------------------- toasts */
+.toasts { position: fixed; right: 20px; bottom: 20px; z-index: 100; display: flex; flex-direction: column; gap: 8px; max-width: min(380px, calc(100vw - 40px)); }
+.toast {
+  display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; border-radius: 6px; font-size: 12px; line-height: 1.5;
+  background: #1c2a21; border: 1px solid #3a5442; color: #e3ece6; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  opacity: 0; transform: translateY(8px); transition: opacity 0.25s, transform 0.25s;
+}
+.toast.show { opacity: 1; transform: none; }
+.toast.success .ic { color: #39ff88; }
+.toast.error { border-color: #6b3b3b; background: #2a1c1c; }
+.toast.error .ic { color: #ff8a8a; }
+
+/* ---------------------------------------------------------------- images / placeholders */
+.img-placeholder {
+  width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+  color: #9aa79e; font-size: 10px; background: repeating-linear-gradient(-45deg, #eef1ec 0 8px, #e7ebe5 8px 16px);
+}
+.card-likes { display: inline-flex; align-items: center; gap: 3px; color: #8fb59d; }
+.card-price > .card-likes { font: 500 10px "IBM Plex Mono", monospace; }
+.meta-status.off i { background: #d9b64a; }
+
+/* ---------------------------------------------------------------- hero art (replaces the generated banner) */
+.hero-visual .hero-art { width: 100%; height: 100%; display: block; }
+.hero-art .traces path { stroke-dasharray: 6 6; animation: dash 6s linear infinite; }
+@keyframes dash { to { stroke-dashoffset: -120; } }
+
+/* ---------------------------------------------------------------- rankings strip (home) */
+.rank-strip { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin: 0 0 36px; }
+.rank-strip > .loading-state { grid-column: 1 / -1; min-height: 120px; padding: 30px; }
+.rank-panel { border: 1px solid #303d34; border-radius: 6px; background: #171f1a; padding: 16px 18px; }
+.rank-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.rank-head h3 { display: flex; gap: 7px; align-items: center; font-size: 13px; margin: 0; }
+.rank-head h3 .ic { color: #39ff88; }
+.rank-empty { font-size: 12px; padding: 18px 0; margin: 0; }
+.kw-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; column-gap: 18px; }
+.kw-list a { display: flex; align-items: center; gap: 10px; padding: 7px 4px; border-bottom: 1px solid #243027; font-size: 12px; }
+.kw-list a:hover { color: #39ff88; }
+.kw-list b { font: 600 12px "IBM Plex Mono", monospace; color: #39ff88; width: 18px; }
+.kw-list span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kw-list small { font: 10px "IBM Plex Mono", monospace; color: #6f8b79; }
+.kw-list.big { grid-template-columns: 1fr; }
+.kw-list.big a { padding: 10px 6px; font-size: 13px; }
+.top-list, .rank-products { list-style: none; margin: 0; padding: 0; }
+.top-list a, .rank-products a { display: flex; align-items: center; gap: 10px; padding: 6px 4px; border-bottom: 1px solid #243027; }
+.top-list a:hover .t span, .rank-products a:hover .t span { color: #39ff88; }
+.top-list b { font: 600 12px "IBM Plex Mono", monospace; color: #39ff88; width: 14px; }
+.top-list .thumb, .rank-products .thumb, .conv-product .thumb { width: 38px; height: 38px; border-radius: 4px; overflow: hidden; background: #f3f4f2; flex-shrink: 0; }
+.top-list .thumb img, .rank-products .thumb img, .conv-product .thumb img { width: 100%; height: 100%; object-fit: contain; mix-blend-mode: multiply; }
+.top-list .t, .rank-products .t { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.top-list .t span, .rank-products .t span { font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.top-list .t small, .rank-products .t small { font: 10px "IBM Plex Mono", monospace; color: #7f9a88; }
+.top-list em { font: normal 10px "IBM Plex Mono", monospace; color: #8fb59d; display: flex; gap: 4px; align-items: center; }
+
+/* ---------------------------------------------------------------- ranking page */
+.ranking-grid { display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: 20px; align-items: start; }
+.panel-head { margin-bottom: 18px; }
+.panel-head h2 { font-size: 18px; margin: 6px 0 4px; display: flex; gap: 8px; align-items: center; }
+.panel-head h2 .ic { color: #39ff88; }
+.panel-head p { margin: 0; font-size: 12px; }
+.panel-head.row { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.panel-head.row h2 { margin: 0; }
+.panel-head.wrap { flex-wrap: wrap; }
+.rank-filters { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+.rank-products a { padding: 10px 4px; }
+.rank-products .thumb { width: 52px; height: 52px; }
+.rank-no { font: 600 15px "IBM Plex Mono", monospace; color: #8aa594; width: 26px; text-align: center; }
+.rank-no.top { color: #39ff88; }
+.rank-products .r { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+.rank-products .r strong { font: 600 13px "IBM Plex Mono", monospace; }
+.rank-products .r em { font: normal 10px "IBM Plex Mono", monospace; color: #8fb59d; }
+.seg { display: inline-flex; border: 1px solid #344b3c; border-radius: 5px; overflow: hidden; margin-bottom: 18px; }
+.seg button { background: transparent; border: 0; color: #9eb5a7; padding: 8px 16px; font-size: 12px; border-right: 1px solid #344b3c; }
+.seg button:last-child { border-right: 0; }
+.seg button.active { background: #213c2a; color: #39ff88; }
+.seg.small { margin: 0; }
+.seg.small button { padding: 5px 10px; font-size: 11px; }
+
+/* ---------------------------------------------------------------- results extras */
+.more { display: flex; justify-content: center; margin-top: 26px; }
+.list-count { font-size: 12px; margin: 0 0 14px; }
+.product-grid.wide { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+
+/* ---------------------------------------------------------------- workspace */
+.ws-head .page-title { margin: 8px 0 6px; }
+.ws-head p.muted { margin: 0 0 22px; font-size: 13px; }
+.gate { max-width: 520px; margin: 30px auto; text-align: center; padding: 48px 32px; }
+.gate .eyebrow { justify-content: center; }
+.gate h2 { font-size: 22px; margin: 10px 0; }
+.gate p.muted { font-size: 13px; line-height: 1.8; }
+.gate-icon { width: 56px; height: 56px; margin: 0 auto 18px; display: flex; align-items: center; justify-content: center; border-radius: 14px; border: 1px solid #365044; background: #19261e; color: #39ff88; }
+.gate-actions { display: flex; gap: 8px; justify-content: center; margin-top: 22px; }
+
+/* ---------------------------------------------------------------- auth */
+.auth-page { display: flex; justify-content: center; }
+.auth-card { width: min(440px, 100%); padding: 36px 32px; }
+.auth-card h1 { font-size: 24px; margin: 8px 0 24px; letter-spacing: -0.6px; }
+.auth-brand { margin-bottom: 28px; padding-top: 6px; }
+.auth-brand .brand-mark { grid-template-columns: repeat(2, 14px); grid-template-rows: repeat(2, 14px); gap: 4px; }
+.auth-foot { margin: 22px 0 0; font-size: 12px; text-align: center; }
+.pw-rules { list-style: none; display: flex; flex-wrap: wrap; gap: 6px; margin: -4px 0 0; padding: 0; }
+.pw-rules li { font-size: 10px; padding: 3px 8px; border-radius: 3px; border: 1px solid #36453b; color: #7d9082; }
+.pw-rules li::before { content: "○ "; }
+.pw-rules li.ok { color: #39ff88; border-color: #366647; background: #1c2e22; }
+.pw-rules li.ok::before { content: "✓ "; }
+
+/* ---------------------------------------------------------------- product detail */
+.detail { padding-top: 30px; padding-bottom: 60px; }
+.back-link { display: inline-flex; gap: 6px; align-items: center; font-size: 12px; margin-bottom: 22px; }
+.back-link:hover { color: #39ff88; }
+.detail-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 48px; }
+.main-image { position: relative; min-height: 440px; }
+.main-image .img-placeholder { min-height: 440px; font-size: 12px; }
+.plate-status { position: absolute; left: 0; right: 0; bottom: 0; padding: 9px; text-align: center; background: #12241ed9; color: #eee; font-size: 12px; }
+.thumbs { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+.thumb-wrap { position: relative; }
+.thumb { width: 64px; height: 64px; padding: 0; border: 2px solid transparent; border-radius: 5px; background: #f3f4f2; overflow: hidden; }
+.thumb img { width: 100%; height: 100%; object-fit: cover; }
+.thumb.active { border-color: #39ff88; }
+.thumb-del { position: absolute; top: -6px; right: -6px; width: 20px; height: 20px; border-radius: 50%; border: 1px solid #6b3b3b; background: #2a1c1c; color: #ff9a9a; display: flex; align-items: center; justify-content: center; padding: 0; }
+.badges { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; }
+.badge.hot { color: #122117; background: #39ff88; border-color: #39ff88; }
+.detail-title { font-size: 30px; line-height: 1.35; letter-spacing: -0.8px; margin: 0 0 14px; word-break: break-word; }
+.spec-tags.lg .spec-tag { font-size: 11px; padding: 4px 9px; line-height: 1.4; }
+.price-box { border-top: 1px solid #303a34; border-bottom: 1px solid #303a34; padding: 18px 0; margin-top: 18px; }
+.price-box .price { margin: 0; }
+.price-box .price span { font: 500 16px "IBM Plex Sans KR", sans-serif; margin-left: 4px; }
+.price-box p.muted { margin: 6px 0 0; font-size: 12px; }
+.info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 20px; padding: 18px 0; border-bottom: 1px solid #303a34; font-size: 13px; }
+.info-grid p { margin: 0; display: flex; gap: 5px; align-items: center; }
+.info-grid p.muted { font-size: 11px; margin-bottom: 3px; }
+.buy-actions { display: grid; grid-template-columns: 1fr auto auto; gap: 8px; margin-top: 20px; }
+.buy-actions .btn { min-height: 46px; }
+.heart-btn { width: 46px; padding: 0; }
+.heart-btn.saved { color: #39ff88; border-color: #39ff88; }
+.trade-form { margin-top: 14px; padding: 14px; border: 1px solid #344b3c; border-radius: 6px; background: #17221b; }
+.owner-box { margin-top: 20px; }
+.owner-box h3 { margin: 6px 0 14px; font-size: 16px; }
+.owner-box .field { max-width: 260px; }
+.file-btn { cursor: pointer; }
+.detail-sections { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; margin-top: 50px; padding-top: 36px; border-top: 1px solid #303a34; }
+.detail-sections h2 { font-size: 19px; margin: 8px 0 16px; }
+.description { white-space: pre-wrap; word-break: break-word; font-size: 13px; line-height: 1.9; color: #c7d1ca; margin: 0; }
+.spec-table { margin: 0; border-top: 1px solid #303a34; }
+.spec-table div { display: flex; justify-content: space-between; gap: 20px; padding: 11px 0; border-bottom: 1px solid #303a34; font-size: 13px; }
+.spec-table dt { color: #8c9b91; }
+.spec-table dd { margin: 0; text-align: right; word-break: break-word; }
+
+/* ---------------------------------------------------------------- sell */
+.sell-layout { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 22px; align-items: start; }
+.preview { position: sticky; top: 20px; }
+.preview-plate { aspect-ratio: 1; min-height: 0; margin: 12px 0 14px; }
+.preview-plate img { padding: 14px; }
+.preview .center { padding: 20px; line-height: 2; }
+.pv-title { font-weight: 600; margin: 4px 0; word-break: break-word; }
+.pv-price { font: 600 18px "IBM Plex Mono", monospace; margin: 0 0 16px; }
+.preview .form-error { margin-bottom: 12px; }
+.dropzone {
+  display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 30px; cursor: pointer; text-align: center;
+  border: 1px dashed #3f5c49; border-radius: 6px; background: #141e18; color: #8fb59d; font-size: 12px;
+}
+.dropzone:hover, .dropzone.over { border-color: #39ff88; color: #39ff88; background: #17271d; }
+.photo-list { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+.photo-item { position: relative; width: 92px; height: 92px; border-radius: 5px; overflow: hidden; background: #f3f4f2; }
+.photo-item img { width: 100%; height: 100%; object-fit: cover; }
+.photo-item button { position: absolute; top: 4px; right: 4px; width: 22px; height: 22px; border-radius: 50%; border: 0; background: #000a; color: #fff; display: flex; align-items: center; justify-content: center; padding: 0; }
+.photo-item .cover { position: absolute; left: 4px; bottom: 4px; background: #39ff88; color: #102016; font-size: 9px; padding: 1px 5px; border-radius: 2px; font-weight: 600; }
+
+/* ---------------------------------------------------------------- trades */
+.trade-list { display: flex; flex-direction: column; gap: 10px; }
+.trade-row { align-items: center; }
+.trade-thumb { width: 80px; height: 80px; border-radius: 5px; overflow: hidden; background: #f1f4ef; flex-shrink: 0; }
+.trade-thumb img { width: 100%; height: 100%; object-fit: contain; mix-blend-mode: multiply; }
+.trade-thumb .img-placeholder span { display: none; }
+.trade-main { min-width: 0; flex: 1; }
+.trade-meta { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: 11px; }
+.trade-title { display: block; font-weight: 600; margin: 6px 0 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.trade-title:hover { color: #39ff88; }
+.trade-row .price { font-size: 17px; }
+.trade-msg { margin: 4px 0 0; font-size: 12px; color: #a8bdb0; }
+.trade-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.badge.status-requested { color: #f1d27a; border-color: #6a5a2c; background: #2b2717; }
+.badge.status-accepted { color: #39ff88; border-color: #39ff88; }
+.badge.status-completed { color: #9fd8ff; border-color: #2d5770; background: #172630; }
+.badge.status-rejected, .badge.status-canceled { color: #9aa79e; border-color: #3d4740; background: #1b201d; }
+
+/* ---------------------------------------------------------------- profile */
+.profile-grid { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 20px; align-items: start; }
+.me-head { display: flex; gap: 16px; align-items: center; margin-bottom: 18px; }
+.me-head h2 { margin: 4px 0 2px; font-size: 22px; }
+.me-head p { margin: 0; font-size: 12px; }
+.avatar { width: 62px; height: 62px; border-radius: 50%; border: 1px solid #365044; background: #203328; color: #39ff88; display: flex; align-items: center; justify-content: center; }
+.kv { margin: 0 0 6px; border-top: 1px solid #303a34; }
+.kv div { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #303a34; font-size: 13px; }
+.kv dt { color: #8c9b91; }
+.kv dd { margin: 0; }
+#stats h2 { font-size: 17px; margin: 6px 0 8px; }
+.stat { display: flex; align-items: center; gap: 8px; padding: 13px 0; border-bottom: 1px solid #303a34; font-size: 13px; color: #9fb1a5; }
+.stat:last-child { border-bottom: 0; }
+.stat strong { margin-left: auto; color: #eef2ef; }
+.stat:hover { color: #39ff88; }
+.my-products { margin-top: 20px; }
+.mine-row { display: flex; align-items: center; gap: 14px; padding: 12px 0; border-bottom: 1px solid #2c3a31; }
+.mine-row:last-child { border-bottom: 0; }
+.mine-thumb { width: 56px; height: 56px; border-radius: 5px; overflow: hidden; background: #f3f4f2; flex-shrink: 0; }
+.mine-thumb img { width: 100%; height: 100%; object-fit: contain; mix-blend-mode: multiply; }
+.mine-thumb .img-placeholder span, .list-row .img-placeholder span { display: none; }
+.mine-main { flex: 1; min-width: 0; }
+.mine-title { font-weight: 600; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+a.mine-title[href]:hover { color: #39ff88; }
+.mine-main p { margin: 2px 0 0; }
+
+/* ---------------------------------------------------------------- chat */
+.chat-split { height: min(70vh, 680px); min-height: 460px; }
+.room-list { overflow-y: auto; background: #151d18; }
+.list-row { text-decoration: none; position: relative; }
+.list-row .img-placeholder, .list-row img { width: 48px; height: 48px; flex-shrink: 0; border-radius: 4px; overflow: hidden; }
+.room-text { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 1px; }
+.room-top { display: flex; justify-content: space-between; gap: 6px; font-size: 13px; }
+.room-top small { font-size: 10px; }
+.room-product { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10px; }
+.room-last { font-size: 12px; color: #9fb4a6; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.unread-dot { min-width: 20px; height: 20px; border-radius: 10px; background: #39ff88; color: #102016; font: 600 10px/20px "IBM Plex Mono", monospace; text-align: center; padding: 0 5px; }
+.room-empty { padding: 40px 20px; text-align: center; font-size: 12px; line-height: 1.8; }
+.conversation { display: flex; flex-direction: column; min-height: 0; min-width: 0; }
+.conversation > .empty-state, .conversation > .loading-state { flex: 1; }
+.conv-head { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-bottom: 1px solid #354c3d; background: #17221b; }
+.back-rooms { display: none; }
+.conv-product { display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1; }
+.conv-product > span:last-child { min-width: 0; display: flex; flex-direction: column; }
+.conv-product b { font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.conv-product small { font-size: 11px; color: #8fa797; }
+.conv-product:hover b { color: #39ff88; }
+.conv-partner { font-size: 12px; display: flex; gap: 5px; align-items: center; white-space: nowrap; }
+.messages { flex: 1; overflow-y: auto; padding: 8px 18px 14px; display: flex; flex-direction: column; }
+.messages .msg-text { white-space: pre-wrap; display: block; }
+.older { align-self: center; margin: 10px 0; font-size: 11px; padding: 6px 12px; }
+.conv-empty { margin: auto; font-size: 12px; }
+.composer { display: flex; gap: 8px; padding: 12px; border-top: 1px solid #354c3d; background: #17221b; }
+.composer textarea {
+  flex: 1; resize: none; min-height: 42px; max-height: 140px; padding: 11px 12px; border-radius: 5px;
+  border: 1px solid #3b5142; background: #131d17; color: #e7eee9; line-height: 1.5;
+}
+.composer .btn { width: 46px; padding: 0; }
+
+/* ---------------------------------------------------------------- responsive */
+@media (max-width: 1100px) {
+  .product-grid.wide { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .ranking-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 850px) {
+  .rank-strip { grid-template-columns: 1fr; }
+  .detail-grid, .detail-sections, .sell-layout, .profile-grid { grid-template-columns: 1fr; gap: 26px; }
+  .preview { position: static; }
+  .product-grid.wide { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .main-image, .main-image .img-placeholder { min-height: 320px; }
+}
+@media (max-width: 640px) {
+  .header-actions > .chat-link { display: none; }
+  .nav-links { overflow-x: auto; }
+  .nav.open .mobile-only { display: flex !important; }
+  .nav.open .nav-links { flex-wrap: wrap; row-gap: 4px; height: auto; padding: 8px 0; }
+  .nav.open { height: auto; }
+  .kw-list { grid-template-columns: 1fr; }
+  .detail-title { font-size: 23px; }
+  .buy-actions { grid-template-columns: 1fr 1fr auto; }
+  .info-grid { grid-template-columns: 1fr 1fr; }
+  .trade-actions { width: 100%; justify-content: flex-start; }
+  .chat-split { height: calc(100vh - 230px); }
+  .chat-split.has-room .room-list { display: none; }
+  .chat-split:not(.has-room) .conversation { display: none; }
+  .chat-split.has-room .back-rooms { display: flex; }
+  .conv-partner small { display: none; }
+  .auth-card { padding: 28px 20px; }
+  .gate-actions { flex-direction: column; }
+}
+
+/* small thumbnails: icon only, no "사진 없음" caption */
+.thumb .img-placeholder span, .trade-thumb .img-placeholder span { display: none; }
+.thumb .img-placeholder .ic { width: 18px; height: 18px; }

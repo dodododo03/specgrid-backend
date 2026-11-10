@@ -2,7 +2,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.exc import OperationalError
 
@@ -69,6 +69,18 @@ def _install_openapi_fix(app: FastAPI) -> None:
     app.openapi = openapi  # type: ignore[method-assign]
 
 
+FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
+
+
+class FrontendFiles(StaticFiles):
+    """Static files that the browser must revalidate, so a new deploy never runs stale JS modules."""
+
+    async def get_response(self, path: str, scope):  # type: ignore[override]
+        response = await super().get_response(path, scope)
+        response.headers["Cache-Control"] = "no-cache"
+        return response
+
+
 def create_app() -> FastAPI:
     app = FastAPI(
         title=settings.app_name,
@@ -100,9 +112,10 @@ def create_app() -> FastAPI:
         media_dir.mkdir(parents=True, exist_ok=True)
         app.mount("/media", StaticFiles(directory=media_dir), name="media")
 
-        @app.get("/", include_in_schema=False)
-        def root() -> RedirectResponse:
-            return RedirectResponse(url="/docs")
+    # The web frontend (plain HTML/CSS/JS, no build step) is served from the same origin, so it
+    # needs no CORS and the WebSocket uses the same host. Mounted last: API routes win.
+    if FRONTEND_DIR.is_dir():
+        app.mount("/", FrontendFiles(directory=FRONTEND_DIR, html=True), name="frontend")
 
     return app
 

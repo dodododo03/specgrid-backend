@@ -1,3 +1,4 @@
 -r requirements.txt
 pytest>=8.4
 httpx>=0.28
+playwright>=1.65  # tests_e2e (uses the installed Google Chrome)
