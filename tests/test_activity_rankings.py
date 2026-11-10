@@ -3,7 +3,7 @@
 from datetime import UTC, datetime, timedelta
 
 import pytest
-from sqlalchemy import select, update
+from sqlalchemy import func, select, update
 
 from app.models import UserActivityLog
 from app.models.enums import ActivityType
@@ -13,9 +13,18 @@ from tests.test_chat import buyer, product  # noqa: F401 — fixtures
 from tests.test_products import create, visit
 
 
+@pytest.fixture(autouse=True)
+def _since_test_start(db):
+    """Only look at rows written by this test, even if an earlier run left committed rows behind."""
+    global _FIRST_ID
+    _FIRST_ID = (db.scalar(select(func.max(UserActivityLog.id))) or 0) + 1
+
+
 def logs(db, activity: ActivityType):
     return db.scalars(
-        select(UserActivityLog).where(UserActivityLog.activity_type == activity).order_by(UserActivityLog.id)
+        select(UserActivityLog)
+        .where(UserActivityLog.activity_type == activity, UserActivityLog.id >= _FIRST_ID)
+        .order_by(UserActivityLog.id)
     ).all()
 
 
@@ -85,7 +94,7 @@ def test_chat_and_trade_logged_without_content(client, db, auth_headers, buyer, 
     (chat,) = logs(db, ActivityType.CHAT)
     assert chat.detail == {"room_id": room["id"]} and chat.product_id == product["id"]
     assert [t.detail["action"] for t in logs(db, ActivityType.TRADE)] == ["request", "accept"]
-    assert all("비밀" not in str(r.detail) for r in db.scalars(select(UserActivityLog)))
+    assert all("비밀" not in str(r.detail) for r in db.scalars(select(UserActivityLog).where(UserActivityLog.id >= _FIRST_ID)))
 
 
 def test_logging_failure_never_breaks_the_request(client, product, monkeypatch):

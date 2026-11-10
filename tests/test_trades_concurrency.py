@@ -16,7 +16,7 @@ from sqlalchemy import delete, select
 from app.core.redis import get_redis
 from app.db.session import SessionLocal
 from app.main import app
-from app.models import Product, Trade, User
+from app.models import Product, Trade, User, UserActivityLog
 from tests.conftest import API, signup_and_login
 from tests.test_products import GPU_4080
 
@@ -35,6 +35,7 @@ def live(redis_client):
     with SessionLocal() as s:  # clean up everything this test created
         user_ids = list(s.scalars(select(User.id).where(User.email.like(f"%{tag}%"))))
         if user_ids:
+            s.execute(delete(UserActivityLog).where(UserActivityLog.user_id.in_(user_ids)))
             s.execute(delete(Trade).where(Trade.seller_id.in_(user_ids)))
             s.execute(delete(Product).where(Product.seller_id.in_(user_ids)))
             s.execute(delete(User).where(User.id.in_(user_ids)))
