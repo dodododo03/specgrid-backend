@@ -2,6 +2,7 @@ from datetime import UTC, datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query
+from fastapi.responses import JSONResponse
 
 from app.api.deps import DbSession, RedisClient
 from app.core.exceptions import AppError
@@ -33,7 +34,8 @@ def keyword_ranking(params: Annotated[KeywordRankParams, Query()], db: DbSession
         raise AppError("인기 검색어는 day / week / month 중에서 선택해 주세요.")
     key = f"specgrid:ranking:keywords:{params.period}:{params.limit}"
     if (cached := cache.get(key)) is not None:
-        return cached
+        # Already serialized output — re-validating would look for input aliases (e.g. thumbnail_key).
+        return JSONResponse(cached)
     rows = ranking_service.popular_keywords(db, params.period, params.limit)
     result = KeywordRanking(
         period=params.period,
@@ -49,7 +51,8 @@ def product_ranking(params: Annotated[ProductRankParams, Query()], db: DbSession
     key = (f"specgrid:ranking:products:{params.metric}:{params.period}:{params.category or 'all'}:"
            f"{int(params.include_sold)}:{params.limit}")
     if (cached := cache.get(key)) is not None:
-        return cached
+        # Already serialized output — re-validating would look for input aliases (e.g. thumbnail_key).
+        return JSONResponse(cached)
     rows = ranking_service.popular_products(
         db, params.period, params.limit, params.category, params.include_sold, params.metric
     )

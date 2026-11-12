@@ -157,6 +157,18 @@ def test_product_ranking(client, auth_headers):
     assert product_ranking(client, period="all") == [(gpu, 3), (kb, 1)]
 
 
+def test_product_ranking_served_from_cache(client, auth_headers):
+    """Second identical request hits Redis; it must not 500 re-validating serialized output."""
+    pid = create(client, auth_headers)["id"]
+    visit(client, pid)
+    params = {"metric": "views", "period": "week", "limit": 5}
+    first = client.get(f"{API}/rankings/products", params=params)
+    second = client.get(f"{API}/rankings/products", params=params)
+    assert first.status_code == second.status_code == 200
+    assert second.json() == first.json()
+    assert "thumbnail_url" in second.json()["items"][0]["product"]
+
+
 def test_product_ranking_hides_sold_hidden_and_deleted(client, auth_headers):
     ids = [create(client, auth_headers, title=f"상품{i}")["id"] for i in range(3)]
     for pid in ids:
