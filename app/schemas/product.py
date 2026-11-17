@@ -43,6 +43,16 @@ class ProductSpecIn(BaseModel):
         return value
 
 
+class TradePoint(BaseModel):
+    """Map pin for the trade location (WGS84). Kakao Maps only covers Korea, so we accept Korea only."""
+
+    lat: float = Field(ge=33, le=39, description="위도 (대한민국 범위)")
+    lng: float = Field(ge=124, le=132, description="경도 (대한민국 범위)")
+
+
+PIN_NEEDS_LOCATION = "지도 위치(trade_point)를 보낼 때는 거래 장소 이름(trade_location)도 함께 보내야 합니다."
+
+
 class ProductCreate(BaseModel):
     category: ProductCategory
     title: Str(100, 2)
@@ -50,13 +60,23 @@ class ProductCreate(BaseModel):
     price: int = Field(ge=0, le=MAX_PRICE)
     condition: ProductCondition
     trade_location: Str(100) | None = None
+    trade_point: TradePoint | None = Field(default=None, description="거래 장소의 지도 좌표 (선택)")
     spec: ProductSpecIn | None = None
+
+    @model_validator(mode="after")
+    def _pin_has_name(self) -> "ProductCreate":
+        if self.trade_point is not None and self.trade_location is None:
+            raise ValueError(PIN_NEEDS_LOCATION)
+        return self
 
 
 class ProductUpdate(BaseModel):
     """Partial update: only fields present in the request body are changed.
 
-    - trade_location may be set to null to clear it. Photos are managed via /products/{id}/images.
+    - trade_location may be set to null to clear it. Changing or clearing it also clears the map
+      pin unless a new trade_point is sent in the same request (an old pin would point elsewhere).
+    - trade_point: send {lat, lng} together with trade_location, or null to remove only the pin.
+    - Photos are managed via /products/{id}/images.
     - spec: send an object to update only the given spec fields, or null to remove all specs.
     """
 
@@ -65,12 +85,15 @@ class ProductUpdate(BaseModel):
     price: int | None = Field(default=None, ge=0, le=MAX_PRICE)
     condition: ProductCondition | None = None
     trade_location: Str(100) | None = None
+    trade_point: TradePoint | None = None
     spec: ProductSpecIn | None = None
 
     @model_validator(mode="after")
     def _validate(self) -> "ProductUpdate":
         if not self.model_fields_set:
             raise ValueError("수정할 항목을 하나 이상 입력해 주세요.")
+        if self.trade_point is not None and self.trade_location is None:
+            raise ValueError(PIN_NEEDS_LOCATION)
         required = {"title", "description", "price", "condition"}
         nulled = sorted(f for f in required & self.model_fields_set if getattr(self, f) is None)
         if nulled:
@@ -127,8 +150,14 @@ class ProductSummary(ORMModel):
     spec: ProductSpecOut | None
 
 
+class TradePointOut(BaseModel):
+    lat: float
+    lng: float
+
+
 class ProductDetail(ProductSummary):
     description: str
+    trade_point: TradePointOut | None = Field(description="거래 장소 지도 좌표 (없으면 null)")
     images: list[ProductImageOut]
     updated_at: UTCDateTime
     seller: UserPublic

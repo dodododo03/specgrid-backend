@@ -43,7 +43,7 @@ export class ApiError extends Error {
 
 const FIELD_NAMES = {
   email: "이메일", password: "비밀번호", nickname: "닉네임", title: "상품명", description: "상품 설명",
-  price: "가격", category: "카테고리", condition: "상품 상태", trade_location: "거래 지역",
+  price: "가격", category: "카테고리", condition: "상품 상태", trade_location: "거래 장소", trade_point: "지도 위치",
   content: "메시지", message: "메시지", cpu_cores: "CPU 코어 수", ram_gb: "RAM", vram_gb: "VRAM",
   storage_gb: "저장 공간", manufacturer: "제조사", model_name: "모델명", cpu_model: "CPU", gpu_model: "GPU",
   storage_type: "저장장치 종류", files: "사진",

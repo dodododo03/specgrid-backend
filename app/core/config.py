@@ -41,6 +41,10 @@ class Settings(BaseSettings):
     max_images_per_product: int = 10
     max_image_upload_mb: int = 10
 
+    # Kakao Maps JavaScript key. It is public by design (the browser loads the SDK with it); Kakao
+    # only accepts it from the site domains registered in Kakao Developers. Empty = maps disabled.
+    kakao_js_key: str = ""
+
     # Brute-force protection (Redis counters)
     login_max_attempts_per_email: int = 5
     login_max_attempts_per_ip: int = 30

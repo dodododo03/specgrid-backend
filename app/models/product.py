@@ -9,6 +9,7 @@ from sqlalchemy import (
     Boolean,
     CheckConstraint,
     DateTime,
+    Double,
     ForeignKey,
     Index,
     Integer,
@@ -30,6 +31,8 @@ class Product(TimestampMixin, Base):
         CheckConstraint("price >= 0", name="price_non_negative"),
         CheckConstraint("view_count >= 0", name="view_count_non_negative"),
         CheckConstraint("favorite_count >= 0", name="favorite_count_non_negative"),
+        # A map pin is a (lat, lng) pair: both set or both empty.
+        CheckConstraint("(trade_lat IS NULL) = (trade_lng IS NULL)", name="trade_point_pair"),
         # Main listing query: category tab + on-sale + newest first
         Index("ix_products_category_status_created_at", "category", "status", "created_at"),
         Index("ix_products_status_price", "status", "price"),
@@ -55,6 +58,9 @@ class Product(TimestampMixin, Base):
     )
     is_hot_deal: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("0"))
     trade_location: Mapped[str | None] = mapped_column(String(100))
+    # Map pin for trade_location (WGS84, picked on the Kakao map). Empty = text-only location.
+    trade_lat: Mapped[float | None] = mapped_column(Double)
+    trade_lng: Mapped[float | None] = mapped_column(Double)
     view_count: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("0"))
     # Denormalized COUNT(*) of favorites, kept in sync in the same transaction (cheap for list cards).
     favorite_count: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("0"))
@@ -75,6 +81,12 @@ class Product(TimestampMixin, Base):
     @property
     def is_deleted(self) -> bool:
         return self.deleted_at is not None
+
+    @property
+    def trade_point(self) -> dict[str, float] | None:
+        if self.trade_lat is None or self.trade_lng is None:
+            return None
+        return {"lat": self.trade_lat, "lng": self.trade_lng}
 
     @property
     def thumbnail_key(self) -> str | None:

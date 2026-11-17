@@ -3,6 +3,7 @@ import { icon } from "../icons.js";
 import { CATEGORIES, CONDITIONS, busy, categoryName, esc, money, toast } from "../ui.js";
 import { navigate } from "../app.js";
 import { section, workspaceHeader } from "./common.js";
+import { drawMap, loadKakaoMaps } from "../kakao.js";
 
 const MAX_FILES = 10;
 const MAX_MB = 10;
@@ -10,6 +11,10 @@ const MAX_MB = 10;
 export function renderSell() {
   const el = section();
   const files = []; // {file, url}
+  let point = null; // {lat, lng} picked on the map, or null = text-only location
+  let kakao = null; // SDK, once loaded
+  let pin = null; // {map, marker}
+  let alive = true;
 
   el.innerHTML = `
     ${workspaceHeader("SELL ON SPECGRID", "상품 판매하기", "좋은 장비를 기다리는 사람과 연결해 보세요.", "sell")}
@@ -23,7 +28,18 @@ export function renderSell() {
               <label class="field"><span>카테고리 *</span><select name="category">${CATEGORIES.map((c) => `<option value="${c.id}">${c.name}</option>`).join("")}</select></label>
               <label class="field"><span>상품 상태 *</span><select name="condition">${CONDITIONS.map((c) => `<option value="${c.id}" ${c.id === "like_new" ? "selected" : ""}>${c.name}</option>`).join("")}</select></label>
               <label class="field"><span>판매 가격 (원) *</span><input name="price" type="number" inputmode="numeric" min="0" max="1000000000" step="1" required placeholder="0"></label>
-              <label class="field"><span>거래 지역</span><input name="trade_location" maxlength="100" placeholder="예: 서울 강남구"></label>
+            </div>
+            <div class="field meetup-field"><span>거래 장소 <em class="muted" data-place-hint></em></span>
+              <div class="place-search">
+                <input name="trade_location" maxlength="100" placeholder="예: 강남역, 서울 강남구" autocomplete="off" aria-label="거래 장소">
+                <button type="button" class="btn btn-secondary" data-place-search hidden>${icon("search", 16)} 지도에서 찾기</button>
+              </div>
+              <ul class="place-results" data-place-results hidden></ul>
+              <div class="pin-bar" data-pin-bar hidden>
+                <span>${icon("mapPin", 14)} 지도 위치가 지정됐어요. 지도를 눌러 위치를 옮길 수 있어요.</span>
+                <button type="button" class="link" data-pin-clear>위치 지우기</button>
+              </div>
+              <div class="meetup-map" data-sell-map hidden></div>
             </div>
             <label class="field"><span>상품 설명 * <em class="muted" data-count>0 / 5000</em></span>
               <textarea name="description" required minlength="10" maxlength="5000" placeholder="구매 시기, 사용 상태, 구성품 등을 자세히 알려주세요. (10자 이상)"></textarea></label>
@@ -136,10 +152,83 @@ export function renderSell() {
       condition: form.condition.value,
       price: Number(form.price.value),
       trade_location: text("trade_location"),
+      trade_point: point && text("trade_location") ? point : undefined,
       description: form.description.value.trim(),
       spec: hasSpec ? spec : undefined,
     };
   }
+
+  // ------------------------------------------------------------ trade place (Kakao Maps)
+  const results = $("[data-place-results]");
+
+  function setPoint(next) {
+    point = next;
+    $("[data-pin-bar]").hidden = !point;
+    const box = $("[data-sell-map]");
+    box.hidden = !point;
+    if (!point) return;
+    if (!pin) {
+      pin = drawMap(kakao, box, point);
+      kakao.maps.event.addListener(pin.map, "click", (ev) => {
+        const ll = ev.latLng;
+        pin.marker.setPosition(ll);
+        point = { lat: ll.getLat(), lng: ll.getLng() };
+      });
+    } else {
+      const ll = new kakao.maps.LatLng(point.lat, point.lng);
+      pin.map.relayout(); // the box may have been hidden
+      pin.map.setCenter(ll);
+      pin.marker.setPosition(ll);
+    }
+  }
+
+  function searchPlaces() {
+    const q = form.trade_location.value.trim();
+    if (!kakao) return;
+    if (q.length < 2) {
+      toast("장소 이름을 2자 이상 입력해 주세요.", "error");
+      return form.trade_location.focus();
+    }
+    new kakao.maps.services.Places().keywordSearch(q, (data, status) => {
+      if (!alive) return;
+      results.hidden = false;
+      if (status !== kakao.maps.services.Status.OK) {
+        results.innerHTML = `<li class="muted">${status === kakao.maps.services.Status.ZERO_RESULT ? "검색 결과가 없어요. 다른 이름으로 찾아보세요." : "검색하지 못했어요. 잠시 후 다시 시도해 주세요."}</li>`;
+        return;
+      }
+      results.innerHTML = data
+        .map((d, i) => `<li><button type="button" data-place="${i}"><strong>${esc(d.place_name)}</strong><span class="muted">${esc(d.road_address_name || d.address_name)}</span></button></li>`)
+        .join("");
+      results._data = data;
+    }, { size: 6 });
+  }
+
+  loadKakaoMaps()
+    .then((k) => {
+      if (!alive) return;
+      kakao = k;
+      $("[data-place-search]").hidden = false;
+      $("[data-place-hint]").textContent = "검색해서 고르면 지도에 표시돼요";
+    })
+    .catch(() => {}); // no key / SDK blocked: the field stays a plain text input
+
+  form.trade_location.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && kakao) {
+      e.preventDefault(); // search instead of submitting the whole form
+      searchPlaces();
+    }
+  });
+  el.addEventListener("click", (e) => {
+    if (e.target.closest("[data-place-search]")) return searchPlaces();
+    if (e.target.closest("[data-pin-clear]")) return setPoint(null);
+    const pick = e.target.closest("[data-place]");
+    if (pick) {
+      const d = results._data[Number(pick.dataset.place)];
+      form.trade_location.value = d.place_name.slice(0, 100);
+      results.hidden = true;
+      setPoint({ lat: Number(d.y), lng: Number(d.x) });
+    }
+  });
 
   el.addEventListener("input", updatePreview);
   el.addEventListener("change", (e) => {
@@ -201,6 +290,7 @@ export function renderSell() {
   return {
     el,
     destroy() {
+      alive = false;
       files.forEach((f) => URL.revokeObjectURL(f.url));
     },
   };

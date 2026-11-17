@@ -5,7 +5,7 @@
     python tests_e2e/run_e2e.py --shots DIR  # also save screenshots
 
 What it does:
-  1. wipes the `specgrid_e2e` database and Redis db 14 (never the dev or pytest data)
+  1. migrates + wipes the `specgrid_e2e` database and Redis db 14 (never the dev or pytest data)
   2. starts its own uvicorn on :8001 pointed at them
   3. drives TWO browser sessions at once (seller + buyer) through the whole product:
      signup -> sell with photo -> search/filters -> detail -> favorite -> realtime chat both ways
@@ -42,6 +42,9 @@ sys.path.insert(0, str(ROOT))
 def reset_state() -> None:
     os.environ["DB_NAME"] = E2E_DB
     os.environ["REDIS_URL"] = E2E_REDIS
+    # Bring the e2e schema up to date first (new migrations would otherwise 500 the server).
+    subprocess.run([sys.executable, "-m", "alembic", "upgrade", "head"], cwd=ROOT, check=True,
+                   env={**os.environ, "DB_NAME": E2E_DB}, stdout=subprocess.DEVNULL)
     import redis
     from sqlalchemy import create_engine, text
 
@@ -64,7 +67,10 @@ def reset_state() -> None:
 
 def start_server(media_root: str) -> subprocess.Popen:
     env = {**os.environ, "DB_NAME": E2E_DB, "REDIS_URL": E2E_REDIS, "MEDIA_ROOT": media_root,
-           "MEDIA_BASE_URL": f"{BASE}/media", "APP_ENV": "local", "PYTHONUNBUFFERED": "1"}
+           "MEDIA_BASE_URL": f"{BASE}/media", "APP_ENV": "local",
+           # No Kakao key: localhost:8001 isn't a registered Kakao domain anyway, and the fallback
+           # (no map, but a working directions link) is what must never break.
+           "KAKAO_JS_KEY": "", "PYTHONUNBUFFERED": "1"}
     log = open(Path(media_root) / "server.log", "w", encoding="utf-8")
     proc = subprocess.Popen(
         [sys.executable, "-m", "uvicorn", "app.main:app", "--port", str(PORT)],
@@ -222,6 +228,22 @@ def run(headed: bool, shots: Path | None) -> None:
         expect(S.locator(".owner-box")).to_be_visible()  # owner sees the management box, not "buy"
         product_id = int(re.search(r"/product/(\d+)", S.url).group(1))
         shot(S, "detail-owner")
+        expect(S.locator(".meetup")).to_have_count(0)  # text-only location: no map section
+
+        step("a listing with a map pin shows the meet-up section and a Kakao directions link")
+        token = S.evaluate("JSON.parse(localStorage.getItem('specgrid.auth')).access_token")
+        res = S.request.patch(
+            f"{BASE}/api/v1/products/{product_id}",
+            data={"trade_location": "강남역 11번 출구", "trade_point": {"lat": 37.497952, "lng": 127.027619}},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert res.ok, res.text()
+        S.reload()
+        expect(S.locator(".meetup h2")).to_have_text("거래 장소")
+        href = S.locator("[data-directions]").get_attribute("href")
+        assert href.startswith("https://map.kakao.com/link/to/") and href.endswith(",37.497952,127.027619"), href
+        expect(S.locator("[data-detail-map]")).to_contain_text("지도를 표시할 수 없어요")
+        expect(S.locator("[data-place-search]")).to_have_count(0)  # not on this page
 
         step("sell form validation (description too short) stays on the page")
         S.goto(f"{BASE}/#/sell")

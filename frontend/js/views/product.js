@@ -7,6 +7,7 @@ import {
 } from "../ui.js";
 import { markOwnTradeAction, navigate } from "../app.js";
 import { bindHearts, goLogin } from "./common.js";
+import { directionsUrl, drawMap, loadKakaoMaps, placeUrl } from "../kakao.js";
 
 export function renderProduct({ id }) {
   const el = document.createElement("section");
@@ -141,7 +142,38 @@ export function renderProduct({ id }) {
         <div><p class="eyebrow">SPECIFICATIONS</p><h2>상세 스펙</h2>
           ${rows.length ? `<dl class="spec-table">${rows.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join("")}</dl>` : `<p class="muted">입력된 스펙이 없어요.</p>`}
         </div>
+      </section>
+      ${meetupHtml(p)}`;
+    mountMap(p);
+  }
+
+  function meetupHtml(p) {
+    if (!p.trade_point) return "";
+    return `
+      <section class="meetup">
+        <div class="meetup-head">
+          <div><p class="eyebrow">MEET-UP SPOT</p><h2>거래 장소</h2><p class="muted">${icon("mapPin", 14)} ${esc(p.trade_location)}</p></div>
+          <div class="row-actions">
+            <a class="btn" data-directions href="${esc(directionsUrl(p.trade_location, p.trade_point))}" target="_blank" rel="noopener">${icon("arrowUpRight", 16)} 길찾기</a>
+            <a class="btn btn-secondary" href="${esc(placeUrl(p.trade_location, p.trade_point))}" target="_blank" rel="noopener">카카오맵에서 보기</a>
+          </div>
+        </div>
+        <div class="meetup-map lg" data-detail-map><p class="muted center">지도를 불러오는 중이에요…</p></div>
+        <p class="muted small note">${icon("info", 15)} 길찾기를 누르면 카카오맵이 열려요. 출발지를 정하고 자동차·대중교통·도보 중에서 고를 수 있어요.</p>
       </section>`;
+  }
+
+  async function mountMap(p) {
+    const box = el.querySelector("[data-detail-map]");
+    if (!box) return;
+    try {
+      const kakao = await loadKakaoMaps();
+      if (!alive || !box.isConnected) return; // re-rendered meanwhile: the new box mounts its own map
+      box.innerHTML = "";
+      drawMap(kakao, box, p.trade_point, { level: 3 });
+    } catch {
+      if (box.isConnected) box.innerHTML = `<p class="muted center">${icon("mapPin", 22)}<br>지도를 표시할 수 없어요. 위의 버튼으로 카카오맵에서 확인해 주세요.</p>`;
+    }
   }
 
   // ---------------------------------------------------------------- actions

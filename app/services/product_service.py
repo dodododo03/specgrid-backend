@@ -11,6 +11,7 @@ from app.schemas.product import (
     ProductSort,
     ProductStatusUpdate,
     ProductUpdate,
+    TradePoint,
 )
 from app.services import trade_service
 
@@ -35,11 +36,17 @@ def create_product(db: Session, seller: User, data: ProductCreate) -> Product:
         condition=data.condition,
         trade_location=data.trade_location,
     )
+    _set_point(product, data.trade_point)
     if data.spec is not None:
         product.spec = ProductSpec(**data.spec.model_dump())
     db.add(product)
     db.commit()
     return load_detail(db, product.id, public_only=False)
+
+
+def _set_point(product: Product, point: TradePoint | None) -> None:
+    product.trade_lat = point.lat if point else None
+    product.trade_lng = point.lng if point else None
 
 
 def _visible() -> list:
@@ -94,9 +101,15 @@ def get_owned_for_update(db: Session, product_id: int, user: User) -> Product:
 
 def update_product(db: Session, product_id: int, user: User, data: ProductUpdate) -> Product:
     product = get_owned_for_update(db, product_id, user)
+    old_location = product.trade_location
 
-    for field, value in data.model_dump(exclude_unset=True, exclude={"spec"}).items():
+    for field, value in data.model_dump(exclude_unset=True, exclude={"spec", "trade_point"}).items():
         setattr(product, field, value)
+
+    if "trade_point" in data.model_fields_set:
+        _set_point(product, data.trade_point)
+    elif "trade_location" in data.model_fields_set and data.trade_location != old_location:
+        _set_point(product, None)  # the place changed without a new pin: the old pin would mislead
 
     if "spec" in data.model_fields_set:
         if data.spec is None:
