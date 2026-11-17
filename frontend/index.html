@@ -9,6 +9,11 @@
     <link rel="icon" type="image/svg+xml" href="/logo.svg" />
     <link rel="stylesheet" href="/css/style.css" />
     <link rel="stylesheet" href="/css/app.css" />
+    <script>
+      // Kakao Maps only answers for domains registered in Kakao Developers: localhost is, 127.0.0.1
+      // (the address uvicorn prints) isn't. Same server either way, so just switch to localhost.
+      if (location.hostname === "127.0.0.1") location.replace(location.href.replace("//127.0.0.1", "//localhost"));
+    </script>
   </head>
   <body class="dark">
     <div class="announcement">

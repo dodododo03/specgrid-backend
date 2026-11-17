@@ -3,7 +3,7 @@ import { icon } from "../icons.js";
 import { CATEGORIES, CONDITIONS, busy, categoryName, esc, money, toast } from "../ui.js";
 import { navigate } from "../app.js";
 import { section, workspaceHeader } from "./common.js";
-import { drawMap, loadKakaoMaps } from "../kakao.js";
+import { drawMap, geocode, loadKakaoMaps } from "../kakao.js";
 
 const MAX_FILES = 10;
 const MAX_MB = 10;
@@ -266,6 +266,8 @@ export function renderSell() {
       return;
     }
     showError("");
+    const place = form.trade_location.value.trim();
+    if (!point && kakao && place.length >= 2) point = await geocode(kakao, place); // typed, not picked
     const btn = form.querySelector('[type="submit"]');
     const created = await busy(btn, async () => {
       const product = await api.post("/products", payload(), { auth: "required" });

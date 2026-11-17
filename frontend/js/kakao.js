@@ -58,6 +58,25 @@ export function drawMap(kakao, container, { lat, lng }, { level = 3, draggable =
   return { map, marker };
 }
 
+/**
+ * Best map point for free text the user typed without picking from the list.
+ * Address search first, so "서울 용산구" lands on the district (keyword search would return some
+ * landmark inside it), then place search for names like "용산역". Resolves to {lat, lng} or null.
+ */
+export function geocode(kakao, query, timeoutMs = 4000) {
+  const { services } = kakao.maps;
+  const ok = services.Status.OK;
+  return new Promise((resolve) => {
+    setTimeout(() => resolve(null), timeoutMs); // never hang a form submit on a slow search
+    new services.Geocoder().addressSearch(query, (data, status) => {
+      if (status === ok) return resolve({ lat: Number(data[0].y), lng: Number(data[0].x) });
+      new services.Places().keywordSearch(query, (d, st) => {
+        resolve(st === ok ? { lat: Number(d[0].y), lng: Number(d[0].x) } : null);
+      }, { size: 1 });
+    });
+  });
+}
+
 const escHtml = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 
 /**
