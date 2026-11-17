@@ -344,3 +344,29 @@ a.mine-title[href]:hover { color: #39ff88; }
   .meetup-head .row-actions { width: 100%; }
   .meetup-head .row-actions .btn { flex: 1; justify-content: center; }
 }
+
+/* map: "크게 보기" button + full map modal */
+.map-expand { position: absolute; left: 12px; top: 12px; z-index: 10; display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px; border-radius: 8px; border: 1px solid #303a34; background: rgba(18, 24, 22, .92); color: #eef2ef; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 14px rgba(0, 0, 0, .35); }
+.map-expand:hover, .map-expand:focus-visible { border-color: #39ff88; color: #39ff88; outline: none; }
+[data-detail-map] { cursor: zoom-in; }
+html.modal-open { overflow: hidden; }
+.map-modal { width: min(1200px, 94vw); height: min(860px, 90vh); max-width: none; max-height: none; padding: 0; border: 1px solid #303a34; border-radius: 16px; background: #121816; color: #eef2ef; overflow: hidden; display: flex; flex-direction: column; }
+.map-modal:not([open]) { display: none; }
+.map-modal::backdrop { background: rgba(0, 0, 0, .72); }
+.map-modal-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 14px 12px 20px; border-bottom: 1px solid #303a34; }
+.map-modal-title { display: flex; align-items: center; gap: 8px; margin: 0; font-weight: 700; min-width: 0; }
+.map-modal-title span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.map-modal-title .ic { color: #39ff88; flex: none; }
+.map-modal-actions { display: flex; align-items: center; gap: 8px; flex: none; }
+.map-modal-close { display: inline-grid; place-items: center; width: 40px; height: 40px; border: 0; border-radius: 10px; background: transparent; color: #eef2ef; cursor: pointer; }
+.map-modal-close:hover, .map-modal-close:focus-visible { background: #1c2a22; outline: none; }
+.map-modal-body { position: relative; flex: 1; min-height: 0; }
+@media (max-width: 640px) {
+  .map-modal { width: 100vw; height: 100dvh; border: 0; border-radius: 0; }
+  .map-modal-head { flex-wrap: wrap; padding: 10px 10px 10px 14px; }
+  .map-modal-title { flex: 1; }
+  .map-modal-actions { width: 100%; order: 2; }
+  .map-modal-actions .btn { flex: 1; justify-content: center; }
+  .map-modal-close { position: absolute; right: 8px; top: 6px; }
+  .map-modal-head { position: relative; padding-right: 56px; }
+}

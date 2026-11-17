@@ -7,7 +7,7 @@ import {
 } from "../ui.js";
 import { markOwnTradeAction, navigate } from "../app.js";
 import { bindHearts, goLogin } from "./common.js";
-import { directionsUrl, drawMap, loadKakaoMaps, placeUrl } from "../kakao.js";
+import { directionsUrl, drawMap, loadKakaoMaps, openMapModal, placeUrl } from "../kakao.js";
 
 export function renderProduct({ id }) {
   const el = document.createElement("section");
@@ -170,7 +170,15 @@ export function renderProduct({ id }) {
       const kakao = await loadKakaoMaps();
       if (!alive || !box.isConnected) return; // re-rendered meanwhile: the new box mounts its own map
       box.innerHTML = "";
-      drawMap(kakao, box, p.trade_point, { level: 3 });
+      const { map } = drawMap(kakao, box, p.trade_point, { level: 3 });
+      const open = () => openMapModal(kakao, { name: p.trade_location, point: p.trade_point });
+      kakao.maps.event.addListener(map, "click", open); // a click (not a drag) opens the big map
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "map-expand";
+      btn.innerHTML = `${icon("maximize", 15)} 크게 보기`;
+      btn.addEventListener("click", open);
+      box.append(btn);
     } catch {
       if (box.isConnected) box.innerHTML = `<p class="muted center">${icon("mapPin", 22)}<br>지도를 표시할 수 없어요. 위의 버튼으로 카카오맵에서 확인해 주세요.</p>`;
     }

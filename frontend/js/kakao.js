@@ -6,6 +6,7 @@
 // just isn't shown — the directions link below works without the SDK.
 
 import * as api from "./api.js";
+import { icon } from "./icons.js";
 
 let sdk = null;
 
@@ -48,10 +49,58 @@ export function placeUrl(name, { lat, lng }) {
 }
 
 /** Draw a map with one marker. Returns { map, marker } for further use. */
-export function drawMap(kakao, container, { lat, lng }, { level = 3, draggable = true } = {}) {
+export function drawMap(kakao, container, { lat, lng }, { level = 3, draggable = true, scrollwheel = false } = {}) {
   const center = new kakao.maps.LatLng(lat, lng);
-  const map = new kakao.maps.Map(container, { center, level, draggable, scrollwheel: false });
+  // scrollwheel off by default so scrolling the page doesn't get stuck zooming a small map
+  const map = new kakao.maps.Map(container, { center, level, draggable, scrollwheel });
   map.addControl(new kakao.maps.ZoomControl(), kakao.maps.ControlPosition.RIGHT);
   const marker = new kakao.maps.Marker({ position: center, map });
   return { map, marker };
+}
+
+const escHtml = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+
+/**
+ * Big map in a modal (<dialog>: Esc closes it and focus stays inside). Closes on the X button,
+ * Esc, or a click on the dark backdrop. Full screen on phones.
+ */
+export function openMapModal(kakao, { name, point }) {
+  const dlg = document.createElement("dialog");
+  dlg.className = "map-modal";
+  dlg.setAttribute("aria-label", `${name} 지도`);
+  dlg.innerHTML = `
+    <div class="map-modal-head">
+      <p class="map-modal-title">${icon("mapPin", 16)} <span>${escHtml(name)}</span></p>
+      <div class="map-modal-actions">
+        <a class="btn" href="${escHtml(directionsUrl(name, point))}" target="_blank" rel="noopener">${icon("arrowUpRight", 16)} 길찾기</a>
+        <button type="button" class="btn btn-secondary" data-recenter>${icon("mapPin", 16)} 거래 장소로</button>
+        <button type="button" class="icon-btn map-modal-close" data-close aria-label="지도 닫기">${icon("x", 20)}</button>
+      </div>
+    </div>
+    <div class="map-modal-body"></div>`;
+  document.body.append(dlg);
+  document.documentElement.classList.add("modal-open"); // no page scrolling behind the map
+  dlg.showModal();
+
+  const { map } = drawMap(kakao, dlg.querySelector(".map-modal-body"), point, { level: 4, scrollwheel: true });
+  const home = new kakao.maps.LatLng(point.lat, point.lng);
+  const relayout = () => {
+    map.relayout();
+    map.setCenter(home);
+  };
+  window.addEventListener("resize", relayout);
+  const closeOnNav = () => dlg.close(); // browser back / link: don't leave the map over the next page
+  window.addEventListener("hashchange", closeOnNav);
+
+  dlg.addEventListener("click", (e) => {
+    if (e.target === dlg || e.target.closest("[data-close]")) dlg.close(); // backdrop = the dialog itself
+    else if (e.target.closest("[data-recenter]")) map.panTo(home);
+  });
+  dlg.addEventListener("close", () => {
+    window.removeEventListener("resize", relayout);
+    window.removeEventListener("hashchange", closeOnNav);
+    document.documentElement.classList.remove("modal-open");
+    dlg.remove();
+  });
+  return dlg;
 }
