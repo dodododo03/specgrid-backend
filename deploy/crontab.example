@@ -1,7 +1,8 @@
 # SpecGrid scheduled jobs. Install for the deploy user (the one in the docker group):
 #   crontab deploy/crontab.example     (edits nothing else; replaces that user's crontab)
 #   crontab -l                         (check)
-# Times are the server clock (EC2 default: UTC; 03:30 UTC = 12:30 KST).
+# Times are the server clock. deploy/README.md sets it to Asia/Seoul (KST); after changing the
+# time zone run `sudo systemctl restart cron`, or cron keeps using the old one (EC2 default: UTC).
 # Adjust /srv/specgrid if the repo lives elsewhere.
 
 SHELL=/bin/bash

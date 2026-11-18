@@ -41,7 +41,7 @@ echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
 sudo apt update && sudo apt install -y ca-certificates curl git nginx certbot python3-certbot-nginx
 curl -fsSL https://get.docker.com | sudo sh
 sudo usermod -aG docker $USER      # 적용하려면 로그아웃 후 다시 접속
-sudo timedatectl set-timezone Asia/Seoul   # (선택) 로그·cron 시각을 한국 시간으로
+sudo timedatectl set-timezone Asia/Seoul && sudo systemctl restart cron   # 로그·cron 시각을 한국 시간으로
 ```
 
 ## 2. 코드와 설정
