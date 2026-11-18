@@ -2,7 +2,7 @@ import * as api from "../api.js";
 import * as rt from "../realtime.js";
 import { icon } from "../icons.js";
 import {
-  PRODUCT_STATUS, TRADE_STATUS, busy, emptyState, errorState, esc, formatDate, loading, money, productCard,
+  avatar, PRODUCT_STATUS, TRADE_STATUS, busy, emptyState, errorState, esc, formatDate, loading, money, productCard,
   productImage, toast,
 } from "../ui.js";
 import { markOwnTradeAction, navigate } from "../app.js";
@@ -172,7 +172,13 @@ export function renderProfile() {
     try {
       const me = await api.get("/users/me", null, { auth: "required" });
       el.querySelector("#me").innerHTML = `
-        <div class="me-head"><div class="avatar">${icon("user", 27)}</div>
+        <div class="me-head">
+          <div class="avatar-edit">
+            <button type="button" class="avatar-button" data-avatar-pick title="프로필 사진 변경" aria-label="프로필 사진 변경">
+              ${avatar(me, 72)}<span class="avatar-cam">${icon("camera", 14)}</span></button>
+            <input type="file" accept="image/jpeg,image/png,image/webp" data-avatar-file hidden>
+            ${me.profile_image_url ? `<button type="button" class="link-button small" data-avatar-remove>사진 삭제</button>` : ""}
+          </div>
           <div><p class="eyebrow">MY ACCOUNT</p><h2>${esc(me.nickname)}</h2><p class="muted">${esc(me.email)}</p></div></div>
         <dl class="kv">
           <div><dt>가입일</dt><dd>${formatDate(me.created_at)}</dd></div>
@@ -233,6 +239,17 @@ export function renderProfile() {
   el.addEventListener("click", async (e) => {
     const t = e.target.closest("button");
     if (!t) return;
+    if (t.matches("[data-avatar-pick]")) return el.querySelector("[data-avatar-file]").click();
+    if (t.matches("[data-avatar-remove]")) {
+      if (!confirm("프로필 사진을 삭제할까요?")) return;
+      const user = await busy(t, () => api.del("/users/me/profile-image", { auth: "required" }), "삭제 중");
+      if (user) {
+        api.setMe(user);
+        toast("프로필 사진을 삭제했어요.", "success");
+        loadMe();
+      }
+      return;
+    }
     if (t.matches("[data-logout]")) {
       await api.logout(false);
       toast("로그아웃했어요.", "success");
@@ -251,6 +268,22 @@ export function renderProfile() {
     }
   });
   el.addEventListener("change", async (e) => {
+    if (e.target.matches("[data-avatar-file]")) {
+      const file = e.target.files[0];
+      e.target.value = ""; // picking the same file again should still fire "change"
+      if (!file) return;
+      if (file.size > 10 * 1024 * 1024) return toast("사진은 10MB 이하만 올릴 수 있어요.", "error");
+      const fd = new FormData();
+      fd.append("file", file);
+      const btn = el.querySelector("[data-avatar-pick]");
+      const user = await busy(btn, () => api.putForm("/users/me/profile-image", fd, { auth: "required" }), "");
+      if (user) {
+        api.setMe(user);
+        toast("프로필 사진을 바꿨어요.", "success");
+        loadMe();
+      }
+      return;
+    }
     if (e.target.matches("[data-filter]")) {
       statusFilter = e.target.value;
       return loadMine();

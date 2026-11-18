@@ -402,6 +402,22 @@ def run(headed: bool, shots: Path | None) -> None:
         expect(S.locator("#stats")).to_contain_text("2개")
         expect(S.locator(".mine-row")).to_have_count(2)
 
+        step("seller sets a profile photo; header, product page and chat show it; then removes it")
+        expect(S.locator("#me .avatar-img.empty")).to_be_visible()
+        S.set_input_files("[data-avatar-file]", files=[{"name": "me.png", "mimeType": "image/png", "buffer": png}])
+        expect(S.locator("#me .avatar-img img")).to_be_visible(timeout=15_000)
+        expect(S.locator(".user-button .avatar-img img")).to_be_visible()
+        S.goto(f"{BASE}/#/product/{product_id}")
+        expect(S.locator(".info-grid .avatar-img img")).to_be_visible()
+        B.goto(f"{BASE}/#/chat")
+        expect(B.locator(".list-row .avatar-img img").first).to_be_visible()
+        shot(B, "chat-avatar")
+        S.goto(f"{BASE}/#/profile")
+        S.click("[data-avatar-remove]")
+        expect(S.locator("#me .avatar-img.empty")).to_be_visible()
+        expect(S.locator(".user-button .avatar-img")).to_have_count(1)
+        expect(S.locator(".user-button .avatar-img img")).to_have_count(0)
+
         step("expired access token is refreshed silently")
         S.evaluate("""() => { const a = JSON.parse(localStorage.getItem('specgrid.auth'));
                               a.access_token = 'expired.garbage.token';

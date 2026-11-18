@@ -16,7 +16,7 @@ router = APIRouter(prefix="/products/{product_id}/images", tags=["product images
 StorageDep = Annotated[Storage, Depends(get_storage)]
 
 
-async def _read_limited(upload: UploadFile) -> bytes:
+async def read_limited(upload: UploadFile) -> bytes:
     limit = settings.max_image_upload_mb * 1024 * 1024
     data = await upload.read(limit + 1)  # read one byte past the limit instead of the whole file
     if len(data) > limit:
@@ -43,7 +43,7 @@ async def upload_images(
 ):
     if len(files) > settings.max_images_per_product:
         raise PayloadTooLargeError(f"한 번에 최대 {settings.max_images_per_product}장까지 올릴 수 있습니다.")
-    uploads = [await _read_limited(f) for f in files]
+    uploads = [await read_limited(f) for f in files]
     # Decoding/re-encoding is CPU-bound and the DB session is sync: run in a worker thread.
     return await run_in_threadpool(image_service.add_images, db, storage, product_id, user, uploads)
 

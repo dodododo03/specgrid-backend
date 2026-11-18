@@ -109,6 +109,12 @@ export function onAuthChange(fn) {
 
 export const isLoggedIn = () => Boolean(tokens?.access_token);
 export const currentUser = () => me;
+
+/** Replace the cached /users/me (e.g. after a profile-photo change) and refresh the header. */
+export function setMe(user) {
+  me = user;
+  notify();
+}
 export const accessToken = () => tokens?.access_token || null;
 
 export async function refreshTokens() {
@@ -194,6 +200,7 @@ export const post = (path, body, opts = {}) => request("POST", path, { ...opts, 
 export const put = (path, body, opts = {}) => request("PUT", path, { ...opts, body });
 export const patch = (path, body, opts = {}) => request("PATCH", path, { ...opts, body });
 export const del = (path, opts = {}) => request("DELETE", path, opts);
+export const putForm = (path, form, opts = {}) => request("PUT", path, { ...opts, form });
 
 // ------------------------------------------------------------------ auth flows
 

@@ -2,7 +2,7 @@
 import * as api from "./api.js";
 import * as rt from "./realtime.js";
 import { icon } from "./icons.js";
-import { esc, toast, TRADE_STATUS } from "./ui.js";
+import { avatar, esc, toast, TRADE_STATUS } from "./ui.js";
 import { renderHome } from "./views/home.js";
 import { renderProduct } from "./views/product.js";
 import { renderSell } from "./views/sell.js";
@@ -130,7 +130,7 @@ function renderHeader(path = parseHash().path) {
           <span class="unread-badge" id="unread-badge" ${unread ? "" : "hidden"}>${unread > 99 ? "99+" : unread}</span></a>
         ${
           loggedIn
-            ? `<a href="#/profile" class="user-button" title="내 프로필">${icon("user", 19)}<span>${esc(me?.nickname || "내 프로필")}</span></a>`
+            ? `<a href="#/profile" class="user-button" title="내 프로필">${me ? avatar(me, 24) : icon("user", 19)}<span>${esc(me?.nickname || "내 프로필")}</span></a>`
             : `<a href="#/login" class="user-button">${icon("user", 19)}<span>로그인</span></a>`
         }
         <a href="#/sell" class="btn sell-button">${icon("plus", 17)} 판매하기</a>

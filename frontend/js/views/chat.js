@@ -3,7 +3,7 @@
 import * as api from "../api.js";
 import * as rt from "../realtime.js";
 import { icon } from "../icons.js";
-import { PRODUCT_STATUS, emptyState, errorState, esc, loading, money, productImage, timeAgo, toast } from "../ui.js";
+import { PRODUCT_STATUS, avatar, emptyState, errorState, esc, loading, money, productImage, timeAgo, toast } from "../ui.js";
 import { refreshUnread } from "../app.js";
 import { section, workspaceHeader } from "./common.js";
 
@@ -49,7 +49,7 @@ export function renderChat({ roomId }) {
         <a href="#/chat/${r.id}" class="list-row ${r.id === roomId ? "active" : ""}">
           ${productImage(r.product)}
           <span class="room-text">
-            <span class="room-top"><b>${esc(r.partner.nickname)}</b><small>${r.last_message ? timeAgo(r.last_message.created_at) : ""}</small></span>
+            <span class="room-top"><b>${avatar(r.partner, 18)} ${esc(r.partner.nickname)}</b><small>${r.last_message ? timeAgo(r.last_message.created_at) : ""}</small></span>
             <small class="room-product">${esc(r.product.title)}</small>
             <span class="room-last">${r.last_message ? esc(r.last_message.content) : '<span class="muted">새 대화</span>'}</span>
           </span>
@@ -96,7 +96,7 @@ export function renderChat({ roomId }) {
           <span class="thumb">${productImage(p)}</span>
           <span><b>${esc(p.title)}</b><small>${money(p.price)}원 · ${p.is_deleted ? "삭제된 상품" : PRODUCT_STATUS[p.status]}</small></span>
         </a>
-        <span class="conv-partner">${icon("user", 15)} ${esc(room.partner.nickname)} <small class="muted">(${room.my_role === "buyer" ? "판매자" : "구매자"})</small></span>
+        <span class="conv-partner">${avatar(room.partner, 22)} ${esc(room.partner.nickname)} <small class="muted">(${room.my_role === "buyer" ? "판매자" : "구매자"})</small></span>
       </div>
       <div class="messages" id="msgs">
         ${hasOlder ? `<button class="btn btn-secondary older" data-older>이전 메시지 보기</button>` : ""}

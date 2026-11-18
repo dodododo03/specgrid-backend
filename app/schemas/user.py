@@ -4,7 +4,7 @@ from typing import Annotated
 from pydantic import AfterValidator, BaseModel, EmailStr, Field, StringConstraints
 
 from app.models.enums import UserRole
-from app.schemas.common import ORMModel, UTCDateTime
+from app.schemas.common import MediaUrl, ORMModel, UTCDateTime
 
 _NICKNAME_RE = re.compile(r"^[가-힣A-Za-z0-9_]+$")
 
@@ -58,7 +58,7 @@ class UserPublic(ORMModel):
 
     id: int
     nickname: str
-    profile_image_url: str | None
+    profile_image_url: MediaUrl | None = Field(validation_alias="profile_image_key")
 
 
 class UserMe(UserPublic):

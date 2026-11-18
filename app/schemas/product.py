@@ -1,11 +1,10 @@
 from enum import StrEnum
 from typing import Annotated, Any
 
-from pydantic import AfterValidator, BaseModel, Field, StringConstraints, field_validator, model_validator
+from pydantic import BaseModel, Field, StringConstraints, field_validator, model_validator
 
-from app.core.storage import get_storage
 from app.models.enums import ProductCategory, ProductCondition, ProductStatus
-from app.schemas.common import ORMModel, Page, UTCDateTime
+from app.schemas.common import MediaUrl, ORMModel, Page, UTCDateTime
 from app.schemas.user import UserPublic
 
 def Str(max_len: int, min_len: int = 1) -> Any:  # noqa: N802 — reads like a type in annotations
@@ -13,12 +12,6 @@ def Str(max_len: int, min_len: int = 1) -> Any:  # noqa: N802 — reads like a t
     return Annotated[str, StringConstraints(strip_whitespace=True, min_length=min_len, max_length=max_len)]
 
 
-def _media_url(key: str) -> str:
-    return get_storage().url(key)
-
-
-# DB holds storage keys; responses expose public URLs built from the current storage settings.
-MediaUrl = Annotated[str, AfterValidator(_media_url)]
 
 MAX_PRICE = 1_000_000_000  # 10억원 — sanity cap, well within INT range
 

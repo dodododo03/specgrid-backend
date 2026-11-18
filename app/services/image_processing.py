@@ -1,4 +1,4 @@
-"""Validate and normalize uploaded product photos.
+"""Validate and normalize uploaded product and profile photos.
 
 Never trust the filename, extension or Content-Type: the bytes are decoded with Pillow and
 re-encoded from pixels. Re-encoding (1) drops EXIF — including the GPS location of the
@@ -17,6 +17,7 @@ ALLOWED_FORMATS = {"JPEG", "PNG", "WEBP"}
 MAX_PIXELS = 40_000_000          # ~40MP: larger is almost certainly a decompression bomb
 MAIN_MAX_SIDE = 1600
 THUMB_MAX_SIDE = 400
+AVATAR_SIDE = 400
 WEBP_QUALITY = 82
 
 Image.MAX_IMAGE_PIXELS = MAX_PIXELS  # Pillow raises DecompressionBombError above 2x this
@@ -38,7 +39,7 @@ def _encode(image: Image.Image, max_side: int) -> tuple[bytes, tuple[int, int]]:
     return out.getvalue(), copy.size
 
 
-def process_image(data: bytes) -> ProcessedImage:
+def _decode(data: bytes) -> Image.Image:
     try:
         with Image.open(io.BytesIO(data)) as img:
             if img.format not in ALLOWED_FORMATS:
@@ -52,10 +53,33 @@ def process_image(data: bytes) -> ProcessedImage:
         raise
     except (UnidentifiedImageError, Image.DecompressionBombError, OSError, ValueError) as exc:
         raise InvalidImageError("이미지 파일을 읽을 수 없습니다.") from exc
+    return image
 
+
+def process_image(data: bytes) -> ProcessedImage:
+    image = _decode(data)
     has_alpha = image.mode in ("RGBA", "LA") or (image.mode == "P" and "transparency" in image.info)
     image = image.convert("RGBA" if has_alpha else "RGB")
 
     main, (width, height) = _encode(image, MAIN_MAX_SIDE)
     thumb, _ = _encode(image, THUMB_MAX_SIDE)
     return ProcessedImage(main=main, thumb=thumb, width=width, height=height)
+
+
+def process_avatar(data: bytes) -> bytes:
+    """Profile photo: same validation/EXIF stripping, center-cropped to an AVATAR_SIDE square.
+
+    Transparency is flattened onto white so avatars look the same on any background.
+    """
+    image = _decode(data)
+    if image.mode in ("RGBA", "LA") or (image.mode == "P" and "transparency" in image.info):
+        rgba = image.convert("RGBA")
+        image = Image.new("RGB", rgba.size, (255, 255, 255))
+        image.paste(rgba, mask=rgba.getchannel("A"))
+    else:
+        image = image.convert("RGB")
+    side = min(AVATAR_SIDE, image.width, image.height)  # crop to square, never upscale tiny images
+    square = ImageOps.fit(image, (side, side), Image.Resampling.LANCZOS, centering=(0.5, 0.5))
+    out = io.BytesIO()
+    square.save(out, format="WEBP", quality=WEBP_QUALITY, method=4)
+    return out.getvalue()

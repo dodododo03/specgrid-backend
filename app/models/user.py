@@ -21,7 +21,8 @@ class User(TimestampMixin, Base):
     # Nullable so social-login (OAuth) accounts can exist without a local password.
     password_hash: Mapped[str | None] = mapped_column(String(255))
     nickname: Mapped[str] = mapped_column(String(30), nullable=False, unique=True)
-    profile_image_url: Mapped[str | None] = mapped_column(String(2048))
+    # Storage key (e.g. "users/9/ab12...cd.webp"); the public URL is built at response time.
+    profile_image_key: Mapped[str | None] = mapped_column(String(255))
     role: Mapped[UserRole] = mapped_column(
         enum_column(UserRole, "user_role"), nullable=False, server_default=UserRole.USER.value
     )

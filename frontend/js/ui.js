@@ -86,6 +86,15 @@ export function specTags(spec, limit = 3) {
 }
 
 // ------------------------------------------------------------------ images
+/** Round profile photo, or the default person icon when the user has none. */
+export function avatar(user, size = 28, cls = "") {
+  const url = user?.profile_image_url;
+  const style = `width:${size}px;height:${size}px`;
+  return url
+    ? `<span class="avatar-img ${cls}" style="${style}"><img src="${esc(url)}" alt="" loading="lazy" decoding="async"></span>`
+    : `<span class="avatar-img empty ${cls}" style="${style}">${icon("user", Math.round(size * 0.55))}</span>`;
+}
+
 export function placeholder(category, label = "사진 없음") {
   return `<div class="img-placeholder">${icon(categoryIcon(category), 34)}<span>${esc(label)}</span></div>`;
 }

@@ -2,6 +2,7 @@ import * as api from "../api.js";
 import * as rt from "../realtime.js";
 import { icon } from "../icons.js";
 import {
+  avatar,
   PRODUCT_STATUS, TRADE_STATUS, busy, categoryName, conditionName, errorState, esc, formatDate, loading, money,
   placeholder, specTags, toast,
 } from "../ui.js";
@@ -129,7 +130,7 @@ export function renderProduct({ id }) {
             <p class="muted">${esc(conditionName(p.condition))} · ${PRODUCT_STATUS[p.status]}</p>
           </div>
           <div class="info-grid">
-            <div><p class="muted">판매자</p><p>${esc(p.seller.nickname)}${isOwner ? ' <span class="badge">나</span>' : ""}</p></div>
+            <div><p class="muted">판매자</p><p>${avatar(p.seller, 22)} ${esc(p.seller.nickname)}${isOwner ? ' <span class="badge">나</span>' : ""}</p></div>
             <div><p class="muted">거래 지역</p><p>${icon("mapPin", 14)} ${esc(p.trade_location || "미정")}</p></div>
             <div><p class="muted">조회 · 찜</p><p>${icon("eye", 14)} ${p.view_count} · <span data-likes="${p.id}">${icon("heart", 11)} ${p.favorite_count}</span></p></div>
             <div><p class="muted">등록일</p><p>${formatDate(p.created_at)}</p></div>
