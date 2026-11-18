@@ -1,9 +1,10 @@
+from pydantic import EmailStr, TypeAdapter, ValidationError
 from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
-from app.core.exceptions import AuthenticationError, ConflictError
+from app.core.exceptions import AppError, AuthenticationError, ConflictError
 from app.core.security import (
     TokenClaims,
     TokenError,
@@ -15,7 +16,7 @@ from app.core.security import (
 )
 from app.models import User
 from app.models.enums import UserStatus
-from app.schemas.user import LoginRequest, SignupRequest, TokenResponse
+from app.schemas.user import AvailabilityResponse, LoginRequest, Nickname, SignupRequest, TokenResponse
 from app.services.login_limiter import LoginLimiter
 from app.services.token_store import TokenStore
 
@@ -25,6 +26,43 @@ RELOGIN_REQUIRED = "다시 로그인해 주세요."
 
 def _normalize_email(email: str) -> str:
     return email.strip().lower()
+
+
+_EMAIL = TypeAdapter(EmailStr)
+_NICKNAME = TypeAdapter(Nickname)
+
+
+def _first_error(exc: ValidationError, fallback: str) -> str:
+    msg = exc.errors()[0].get("msg", "")
+    # Our own validators raise "Value error, <한국어 메시지>"; library messages are English -> fallback.
+    return msg.removeprefix("Value error, ") if msg.startswith("Value error, ") else fallback
+
+
+def check_availability(db: Session, *, email: str | None, nickname: str | None) -> AvailabilityResponse:
+    """Signup "중복 확인": same format rules and uniqueness check as signup itself."""
+    if (email is None) == (nickname is None):
+        raise AppError("email 또는 nickname 중 하나만 보내 주세요.")
+    if email is not None:
+        try:
+            value = _normalize_email(_EMAIL.validate_python(email.strip()))
+        except ValidationError:
+            return AvailabilityResponse(field="email", available=False, message="올바른 이메일 형식이 아닙니다.")
+        taken = db.scalar(select(User.id).where(User.email == value).limit(1)) is not None
+        return AvailabilityResponse(
+            field="email", available=not taken,
+            message="이미 가입된 이메일입니다." if taken else "사용할 수 있는 이메일입니다.",
+        )
+    try:
+        value = _NICKNAME.validate_python(nickname)
+    except ValidationError as exc:
+        return AvailabilityResponse(
+            field="nickname", available=False, message=_first_error(exc, "닉네임은 2~30자로 입력해 주세요.")
+        )
+    taken = db.scalar(select(User.id).where(User.nickname == value).limit(1)) is not None
+    return AvailabilityResponse(
+        field="nickname", available=not taken,
+        message="이미 사용 중인 닉네임입니다." if taken else "사용할 수 있는 닉네임입니다.",
+    )
 
 
 def signup(db: Session, data: SignupRequest) -> User:

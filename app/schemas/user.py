@@ -1,5 +1,5 @@
 import re
-from typing import Annotated
+from typing import Annotated, Literal
 
 from pydantic import AfterValidator, BaseModel, EmailStr, Field, StringConstraints
 
@@ -44,6 +44,12 @@ class RefreshRequest(BaseModel):
 
 class LogoutRequest(BaseModel):
     refresh_token: str | None = Field(default=None, max_length=2048, description="함께 폐기할 refresh 토큰 (권장)")
+
+
+class AvailabilityResponse(BaseModel):
+    field: Literal["email", "nickname"]
+    available: bool
+    message: str
 
 
 class TokenResponse(BaseModel):

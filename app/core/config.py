@@ -56,6 +56,9 @@ class Settings(BaseSettings):
     login_max_attempts_per_email: int = 5
     login_max_attempts_per_ip: int = 30
     login_lock_minutes: int = 15
+    # Signup "중복 확인" reveals whether an email is registered, so cap it per IP to stop harvesting.
+    availability_checks_per_ip: int = 60
+    availability_window_minutes: int = 10
 
     def _url(self, username: str, password: str) -> URL:
         # URL.create escapes special characters in the password safely.

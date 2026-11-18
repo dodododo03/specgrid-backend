@@ -1,8 +1,12 @@
-from fastapi import APIRouter, Response, status
+import hashlib
+from typing import Annotated
 
-from app.api.deps import ClientIp, CurrentAuth, DbSession, LoginLimiterDep, TokenStoreDep
-from app.schemas.user import LoginRequest, LogoutRequest, RefreshRequest, SignupRequest, TokenResponse, UserMe
-from app.services import auth_service
+from fastapi import APIRouter, Query, Response, status
+
+from app.api.deps import ClientIp, CurrentAuth, DbSession, LoginLimiterDep, RedisClient, TokenStoreDep
+from app.core.config import settings
+from app.schemas.user import AvailabilityResponse, LoginRequest, LogoutRequest, RefreshRequest, SignupRequest, TokenResponse, UserMe
+from app.services import auth_service, rate_limit
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -10,6 +14,32 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 @router.post("/signup", response_model=UserMe, status_code=status.HTTP_201_CREATED, summary="회원가입")
 def signup(data: SignupRequest, db: DbSession):
     return auth_service.signup(db, data)
+
+
+@router.get(
+    "/availability",
+    response_model=AvailabilityResponse,
+    summary="회원가입 중복 확인 (이메일 또는 닉네임)",
+    description=(
+        "email 또는 nickname 중 하나만 보내세요. 형식이 틀리면 available=false와 이유를 돌려줍니다. "
+        "가입 여부를 알려 주는 API라서 같은 IP에서 10분에 60회까지만 허용합니다(초과 시 429)."
+    ),
+)
+def check_availability(
+    db: DbSession,
+    redis_client: RedisClient,
+    ip: ClientIp,
+    email: Annotated[str | None, Query(max_length=255)] = None,
+    nickname: Annotated[str | None, Query(max_length=60)] = None,
+):
+    rate_limit.hit(
+        redis_client,
+        f"specgrid:availability:ip:{hashlib.sha256(ip.encode()).hexdigest()}",
+        settings.availability_checks_per_ip,
+        settings.availability_window_minutes * 60,
+        "중복 확인 요청이 너무 많습니다. {minutes}분 후 다시 시도해 주세요.",
+    )
+    return auth_service.check_availability(db, email=email, nickname=nickname)
 
 
 @router.post(

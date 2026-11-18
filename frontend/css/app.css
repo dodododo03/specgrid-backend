@@ -23,6 +23,23 @@ select { background: #131d17; color: #e7eee9; border: 1px solid #3b5142; border-
 .form-error { color: #ff9a9a; background: #2a1a1a; border: 1px solid #5a3030; border-radius: 4px; padding: 9px 12px; font-size: 12px; margin: 0; }
 .field > span { display: flex; justify-content: space-between; gap: 8px; }
 .field em { font-style: normal; font-size: 10px; }
+.field > label { display: flex; justify-content: space-between; gap: 8px; }
+/* signup: input + "중복 확인" button */
+.check-row { display: flex; gap: 8px; }
+.check-row input { flex: 1; min-width: 0; }
+.check-row .btn { flex: none; padding-inline: 12px; font-size: 12px; }
+.field-hint { margin: -2px 0 0; font-size: 11px; color: #8c9b91; display: flex; align-items: center; gap: 4px; }
+.field-hint:empty { display: none; }
+.field-hint.ok { color: #39ff88; }
+.field-hint.bad { color: #ff9a9a; }
+/* password show/hide */
+.pw-wrap { position: relative; }
+.pw-wrap input { padding-right: 44px; }
+.pw-toggle { position: absolute; top: 50%; right: 4px; transform: translateY(-50%); width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border: 0; border-radius: 4px; background: none; color: #8c9b91; cursor: pointer; }
+.pw-toggle:hover, .pw-toggle[aria-pressed="true"] { color: #39ff88; }
+.pw-toggle:focus-visible { outline: 2px solid #39ff88; outline-offset: -2px; }
+/* Edge has its own reveal button: hide it so there aren't two eyes */
+input[type="password"]::-ms-reveal, input[type="password"]::-ms-clear { display: none; }
 .form-stack { display: flex; flex-direction: column; gap: 16px; }
 
 /* ---------------------------------------------------------------- header extras */
