@@ -1,0 +1,102 @@
+# SpecGrid production stack on one server: web app + MariaDB + Redis.
+#   docker compose up -d --build        (see deploy/README.md for the full first-time setup)
+#
+# Network exposure:
+#   app   -> 127.0.0.1:8000 only. The host's nginx terminates HTTPS and proxies to it.
+#   db    -> NOT published. Reachable only from containers on this compose network.
+#   redis -> NOT published. Same.
+# Data lives in ./data on the host (back it up: deploy/backup.sh).
+
+# Secrets: the web server only ever sees the app account's password. The root password stays with
+# the db service; the migrator (DDL) password only with the one-shot "migrate" service. So a bug or
+# break-in in the web app can't alter tables or rewrite activity logs (scripts/harden_db_privileges.sql).
+x-app-base: &app-base
+  build: .
+  image: specgrid-app
+  env_file: .env
+  logging: &logging
+    driver: json-file
+    options: { max-size: "10m", max-file: "5" }   # don't let logs fill the disk
+
+x-app-env: &app-env
+  # Fixed by this file, not by .env, so they can't drift from the container layout.
+  APP_ENV: production
+  DB_HOST: db
+  DB_PORT: "3306"
+  REDIS_URL: redis://redis:6379/0
+  MEDIA_ROOT: /data/media
+  MARIADB_ROOT_PASSWORD: ""
+
+services:
+  # Runs `alembic upgrade head` with the migrator account, then exits. `docker compose up` runs it
+  # before (re)starting app. Also used for maintenance jobs that need that account:
+  #   docker compose run --rm migrate python -m scripts.purge_activity_logs
+  migrate:
+    <<: *app-base
+    command: ["alembic", "upgrade", "head"]
+    restart: "no"
+    environment:
+      <<: *app-env
+      DB_PASSWORD: ""                 # this job doesn't need the app account
+    depends_on:
+      db:
+        condition: service_healthy
+
+  app:
+    <<: *app-base
+    restart: unless-stopped
+    environment:
+      <<: *app-env
+      DB_MIGRATION_PASSWORD: ""       # the web server must not hold the DDL account
+    volumes:
+      - ./data/media:/data/media          # nginx serves the same folder at /media/
+    ports:
+      - "127.0.0.1:8000:8000"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  db:
+    image: mariadb:12.3.3                # same version as local development
+    restart: unless-stopped
+    environment:
+      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD:?set MARIADB_ROOT_PASSWORD in .env}
+      # read by deploy/mariadb/init/01-accounts.sh on the very first start (empty data dir)
+      DB_NAME: ${DB_NAME:-specgrid}
+      DB_USER: ${DB_USER:-specgrid_app}
+      DB_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in .env}
+      DB_MIGRATION_USER: ${DB_MIGRATION_USER:-specgrid_migrator}
+      DB_MIGRATION_PASSWORD: ${DB_MIGRATION_PASSWORD:?set DB_MIGRATION_PASSWORD in .env}
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --innodb-buffer-pool-size=192M   # small server (1 GB RAM): leave memory for the app
+      - --max-connections=60
+    volumes:
+      - ./data/mysql:/var/lib/mysql
+      - ./deploy/mariadb/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    logging: *logging
+
+  redis:
+    image: redis:8.2-alpine
+    restart: unless-stopped
+    # appendonly: login sessions (refresh tokens) survive a Redis restart instead of logging everyone out
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory", "128mb", "--maxmemory-policy", "noeviction"]
+    volumes:
+      - ./data/redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    logging: *logging

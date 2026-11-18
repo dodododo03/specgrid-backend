@@ -279,3 +279,7 @@ alembic upgrade head
 | chat_messages | message_type, content, is_read, IX(room_id, id) | room_id → chat_rooms (CASCADE), sender_id → users |
 | trades | price(요청 시점), status, message, responded_at, completed_at, 생성 컬럼 active_buyer_id / accepted_product_id (UQ) | product_id → products, buyer_id / seller_id → users |
 | user_activity_logs | activity_type, session_id(비로그인), search_keyword, detail(JSON), ip, UA | user_id·product_id → SET NULL |
+
+## 배포
+
+AWS EC2 + Docker Compose(웹 앱, MariaDB, Redis) + nginx(HTTPS) 구성입니다. 단계별 안내와 배포 전 체크리스트는 [`deploy/README.md`](deploy/README.md)를 보세요.

@@ -85,6 +85,9 @@ def main() -> None:
     print()
     if bind in ("127.0.0.1", "localhost", "::1"):
         print(f"  ✅ MariaDB가 이 컴퓨터에서만 접속을 받음 (bind_address={bind})")
+    elif settings.db_host == "db":  # Docker (docker-compose.yml): listening inside the container is expected
+        print(f"  ℹ️  Docker 컨테이너 안에서 접속을 받음 (bind_address={bind or '모든 주소'}). "
+              "docker-compose.yml에서 db 포트를 외부에 공개(ports)하지 않았다면 정상입니다.")
     else:
         print(f"  ⚠️  MariaDB가 외부 네트워크에서도 접속을 받음 (bind_address={bind or '모든 주소'}). "
               "서버에서는 my.cnf에 bind-address=127.0.0.1 권장")

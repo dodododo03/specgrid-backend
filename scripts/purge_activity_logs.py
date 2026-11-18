@@ -9,7 +9,8 @@
 2) Rows older than --delete-days are deleted entirely.
 
 Runs with the migrator account (scripts/admin_db.py), because the app account can't modify logs.
-On the server, schedule it daily (cron: `0 4 * * * cd /srv/specgrid && .venv/bin/python -m scripts.purge_activity_logs`).
+On the server (Docker) it runs daily from cron in the one-shot "migrate" service, which holds that account:
+`docker compose run --rm -T migrate python -m scripts.purge_activity_logs` (see deploy/crontab.example).
 """
 
 import argparse

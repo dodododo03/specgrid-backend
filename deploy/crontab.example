@@ -1,0 +1,15 @@
+# SpecGrid scheduled jobs. Install for the deploy user (the one in the docker group):
+#   crontab deploy/crontab.example     (edits nothing else; replaces that user's crontab)
+#   crontab -l                         (check)
+# Times are the server clock (EC2 default: UTC; 03:30 UTC = 12:30 KST).
+# Adjust /srv/specgrid if the repo lives elsewhere.
+
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+# Daily DB + photo backup (keeps 14 days)
+30 3 * * * cd /srv/specgrid && ./deploy/backup.sh >> logs/backup.log 2>&1
+
+# Activity-log retention promised in the 개인정보처리방침: anonymize after 30 days, delete after 180
+# (runs as the migrator account: the web server's account can't modify logs)
+0 4 * * * cd /srv/specgrid && docker compose run --rm -T migrate python -m scripts.purge_activity_logs >> logs/purge.log 2>&1
