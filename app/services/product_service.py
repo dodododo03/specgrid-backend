@@ -1,4 +1,4 @@
-from sqlalchemy import Select, func, select, update
+from sqlalchemy import Select, func, or_, select, update
 from sqlalchemy.orm import Session, joinedload
 
 from app.core.exceptions import ConflictError, NotFoundError, PermissionDeniedError
@@ -14,6 +14,7 @@ from app.schemas.product import (
     TradePoint,
 )
 from app.services import trade_service
+from app.services.manufacturer_aliases import search_terms
 
 NOT_FOUND = "상품을 찾을 수 없습니다."
 IN_TRADE = "예약중인 거래가 있습니다. 거래를 완료하거나 취소한 뒤 다시 시도해 주세요."
@@ -181,7 +182,9 @@ def _apply_filters(stmt: Select, p: ProductSearchParams) -> Select:
 
     spec_filters = []
     if p.manufacturer:
-        spec_filters.append(ProductSpec.manufacturer.contains(p.manufacturer, autoescape=True))
+        spec_filters.append(or_(*(
+            ProductSpec.manufacturer.contains(term, autoescape=True) for term in search_terms(p.manufacturer)
+        )))
     if p.cpu:
         spec_filters.append(ProductSpec.cpu_model.contains(p.cpu, autoescape=True))
     if p.gpu:

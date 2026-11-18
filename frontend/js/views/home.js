@@ -6,7 +6,7 @@ import {
 import { bindHearts } from "./common.js";
 
 const PAGE_SIZE = 12;
-const MANUFACTURERS = ["Apple", "NVIDIA", "AMD", "Intel", "Samsung", "MSI", "ASUS", "Lenovo", "Dell", "Keychron", "Sony", "Corsair"];
+const MANUFACTURERS = ["Apple", "NVIDIA", "AMD", "Intel", "삼성", "MSI", "ASUS", "Lenovo", "Dell", "Keychron", "Sony", "Corsair"];
 const CPUS = [["M3", "Apple M3"], ["M2", "Apple M2"], ["Intel", "Intel"], ["i7", "Intel Core i7"], ["i9", "Intel Core i9"], ["Ryzen", "AMD Ryzen"]];
 const GPUS = ["RTX 4090", "RTX 4080", "RTX 4070", "RTX 3080", "RX 7900"];
 

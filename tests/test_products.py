@@ -155,6 +155,9 @@ def test_default_search_hides_sold(client, catalog):
         ({"gpu": "4070"}, {"4070"}),
         ({"gpu": "rtx"}, {"4080", "4070"}),                        # case-insensitive partial match
         ({"manufacturer": "apple"}, {"macbook"}),
+        ({"manufacturer": "애플"}, {"macbook"}),                    # Korean spelling finds "Apple"
+        ({"manufacturer": "엔비디아"}, {"4080"}),
+        ({"manufacturer": "nvidia"}, {"4080"}),
         ({"min_ram_gb": 32}, {"macbook"}),                         # thinkpad is sold
         ({"min_ram_gb": 32, "include_sold": True}, {"macbook", "thinkpad"}),
         ({"cpu": "intel", "include_sold": True}, {"thinkpad"}),
@@ -199,3 +202,15 @@ def test_popular_sort_uses_view_count(client, catalog):
 )
 def test_search_validation(client, params):
     assert client.get(f"{API}/products", params=params).status_code == 422
+
+
+def test_manufacturer_filter_matches_korean_and_english(client, auth_headers):
+    """'삼성' in the filter menu must also find listings where the seller typed 'Samsung', and vice versa."""
+    kr = create(client, auth_headers, category="storage", title="삼성 990 PRO 2TB", spec={"manufacturer": "삼성전자"})
+    en = create(client, auth_headers, category="storage", title="Samsung T7 1TB", spec={"manufacturer": "SAMSUNG"})
+    other = create(client, auth_headers, category="storage", title="WD SN850X", spec={"manufacturer": "WD"})
+    for q in ("삼성", "Samsung", "samsung"):
+        ids = {p["id"] for p in client.get(f"{API}/products", params={"manufacturer": q}).json()["items"]}
+        assert ids == {kr["id"], en["id"]}, q
+    ids = {p["id"] for p in client.get(f"{API}/products", params={"manufacturer": "WD"}).json()["items"]}
+    assert ids == {other["id"]}
