@@ -29,6 +29,7 @@ assert engine.url.database == "specgrid_test", "refusing to run tests against a 
 assert get_redis_client().connection_pool.connection_kwargs["db"] == 15, "refusing to flush a non-test Redis db"
 
 API = "/api/v1"
+CONSENT = {"agree_terms": True, "agree_privacy": True, "over_14": True}  # required at signup
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -76,7 +77,7 @@ def client(db: Session, redis_client) -> Iterator[TestClient]:
 
 def signup_and_login(client: TestClient, email: str = "seller@specgrid.kr", nickname: str = "판매자1",
                      password: str = "Passw0rd!") -> dict[str, str]:
-    r = client.post(f"{API}/auth/signup", json={"email": email, "password": password, "nickname": nickname})
+    r = client.post(f"{API}/auth/signup", json={"email": email, "password": password, "nickname": nickname, **CONSENT})
     assert r.status_code == 201, r.text
     r = client.post(f"{API}/auth/login", json={"email": email, "password": password})
     assert r.status_code == 200, r.text

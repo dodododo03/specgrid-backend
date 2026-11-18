@@ -166,6 +166,25 @@ export function renderProfile() {
       <div class="panel-head row"><div><p class="eyebrow">MY LISTINGS</p><h2>내 판매 상품</h2></div>
         <select data-filter aria-label="상태 필터"><option value="">전체</option>${Object.entries(PRODUCT_STATUS).map(([k, v]) => `<option value="${k}">${v}</option>`).join("")}</select></div>
       <div id="mine">${loading()}</div>
+    </section>
+    <section class="panel danger-zone">
+      <details data-withdraw-box>
+        <summary><span><p class="eyebrow">DANGER ZONE</p><h2>회원 탈퇴</h2></span><span class="muted small toggle-label" aria-hidden="true"></span></summary>
+        <ul class="withdraw-notes">
+          <li>이메일·비밀번호·프로필 사진이 <b>즉시 삭제</b>되고, 닉네임은 '탈퇴회원#번호'로 바뀌어요.</li>
+          <li>내가 등록한 <b>상품과 사진이 모두 삭제</b>되고, 찜 목록도 사라져요.</li>
+          <li>대기 중인 구매 요청은 자동으로 취소·거절돼요. <b>예약중인 거래</b>가 있으면 먼저 완료하거나 취소해야 해요.</li>
+          <li>채팅과 완료된 거래 기록은 상대방의 기록이라 남지만, 누구인지는 알 수 없게 표시돼요.</li>
+          <li>탈퇴 후에는 되돌릴 수 없어요. 같은 이메일로 다시 가입할 수는 있어요.</li>
+        </ul>
+        <form class="withdraw-form" data-withdraw novalidate>
+          <label class="field"><span>현재 비밀번호</span>
+            <input name="password" type="password" autocomplete="current-password" required maxlength="128"></label>
+          <label class="check-line"><input type="checkbox" name="confirm"> 위 안내를 확인했고 탈퇴에 동의해요.</label>
+          <button class="btn btn-danger" type="submit">회원 탈퇴</button>
+        </form>
+        <p class="muted small">탈퇴 관련 자세한 내용은 <a class="link" href="#/privacy">개인정보처리방침</a>을 확인해 주세요.</p>
+      </details>
     </section>`;
 
   async function loadMe() {
@@ -267,6 +286,21 @@ export function renderProfile() {
       loadMine();
     }
   });
+  el.querySelector("[data-withdraw]").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const form = e.target;
+    if (!form.password.value) return toast("현재 비밀번호를 입력해 주세요.", "error");
+    if (!form.confirm.checked) return toast("안내를 확인하고 동의에 체크해 주세요.", "error");
+    if (!confirm("정말 탈퇴할까요? 되돌릴 수 없어요.")) return;
+    const btn = form.querySelector('button[type="submit"]');
+    const ok = await busy(btn, () => api.post("/users/me/withdraw", { password: form.password.value }, { auth: "required", retry: false }), "처리 중");
+    form.password.value = "";
+    if (!ok) return;
+    api.forgetSession(); // the server already revoked every token
+    toast("탈퇴가 완료됐어요. 그동안 이용해 주셔서 감사합니다.", "success", 5000);
+    navigate("/");
+  });
+
   el.addEventListener("change", async (e) => {
     if (e.target.matches("[data-avatar-file]")) {
       const file = e.target.files[0];

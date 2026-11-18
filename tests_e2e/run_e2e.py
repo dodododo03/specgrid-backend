@@ -157,6 +157,7 @@ def run(headed: bool, shots: Path | None) -> None:
             page.fill('input[name="nickname"]', who["nick"])
             page.fill('input[name="password"]', who["pw"])
             page.fill('input[name="password2"]', who["pw"])
+            page.check("[data-agree-all]")
             page.click('button:has-text("가입하고 시작하기")')
             expect(page.locator(".user-button")).to_contain_text(who["nick"])
 
@@ -198,6 +199,15 @@ def run(headed: bool, shots: Path | None) -> None:
         expect(B.locator('[data-hint="nickname"]')).to_contain_text("이미 사용 중인 닉네임")
         B.fill('input[name="password"]', "Passw0rd!")
         B.fill('input[name="password2"]', "Passw0rd!")
+        B.click('button:has-text("가입하고 시작하기")')
+        expect(B.locator("[data-error]")).to_contain_text("14세")  # consent is required too
+        B.check('input[name="over_14"]')
+        B.click('button:has-text("가입하고 시작하기")')
+        expect(B.locator("[data-error]")).to_contain_text("필수 약관")
+        B.check('input[name="agree_terms"]')
+        expect(B.locator("[data-agree-all]")).not_to_be_checked()
+        B.check('input[name="agree_privacy"]')
+        expect(B.locator("[data-agree-all]")).to_be_checked()  # all items checked -> 전체 동의 too
         B.click('button:has-text("가입하고 시작하기")')
         expect(B.locator("[data-error]")).to_contain_text("이메일 중복 확인")
         expect(B.locator(".user-button")).to_contain_text("로그인")  # still anonymous
@@ -470,6 +480,18 @@ def run(headed: bool, shots: Path | None) -> None:
         S.goto(f"{BASE}/#/login?next=//evil.example")
         expect(S).to_have_url(re.compile(rf"{BASE}/#/$"))
 
+        step("footer has a bold 개인정보처리방침 link; privacy and terms pages render")
+        link = S.locator("footer .privacy-link")
+        expect(link).to_have_text("개인정보처리방침")
+        assert int(link.evaluate("e => getComputedStyle(e).fontWeight")) >= 700
+        link.click()
+        expect(S.locator(".legal h1")).to_have_text("개인정보처리방침")
+        expect(S.locator(".legal")).to_contain_text("개인정보 보호책임자")
+        expect(S.locator(".legal mark.tbd").first).to_be_visible()  # placeholders still to fill
+        shot(S, "privacy")
+        S.click('footer a:has-text("이용약관")')
+        expect(S.locator(".legal h1")).to_have_text("이용약관")
+
         step("unknown page and missing product show friendly errors")
         S.goto(f"{BASE}/#/nope")
         expect(S.locator(".empty-state h3")).to_have_text("페이지를 찾을 수 없어요.")
@@ -480,7 +502,7 @@ def run(headed: bool, shots: Path | None) -> None:
         step("mobile layout: no horizontal scroll on main pages")
         M = browser.new_context(viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True).new_page()
         watches.append(Watch("mobile", M))
-        for path in ("/", f"/#/product/{product_id}", "/#/ranking", "/#/login"):
+        for path in ("/", f"/#/product/{product_id}", "/#/ranking", "/#/login", "/#/signup", "/#/privacy"):
             M.goto(BASE + path)
             M.wait_for_load_state("networkidle")
             sw = M.evaluate("document.documentElement.scrollWidth")
@@ -506,6 +528,29 @@ def run(headed: bool, shots: Path | None) -> None:
         expect(M.locator(".room-list")).to_be_hidden()
         assert M.evaluate("document.documentElement.scrollWidth") <= 392
         shot(M, "mobile-chat")
+
+        # ---------------------------------------------------------- 회원 탈퇴
+        step("buyer withdraws: wrong password refused; then logged out and shown as 탈퇴회원 to the seller")
+        B.goto(f"{BASE}/#/profile")
+        B.click("[data-withdraw-box] summary")
+        B.fill('[data-withdraw] input[name="password"]', "WrongPass1")
+        B.check('[data-withdraw] input[name="confirm"]')
+        B.click('[data-withdraw] button[type="submit"]')
+        expect(B.locator(".toasts")).to_contain_text("비밀번호가 올바르지 않습니다")
+        expect(B.locator(".user-button")).to_contain_text(buyer["nick"])  # still logged in
+        shot(B, "withdraw")
+        B.fill('[data-withdraw] input[name="password"]', buyer["pw"])
+        B.click('[data-withdraw] button[type="submit"]')
+        expect(B.locator(".toasts")).to_contain_text("탈퇴가 완료")
+        expect(B.locator(".user-button")).to_contain_text("로그인")
+        expect(B).to_have_url(re.compile(rf"{BASE}/#/$"))
+        S.goto(f"{BASE}/#/chat")
+        expect(S.locator(".list-row").first).to_contain_text("탈퇴회원#")
+        B.goto(f"{BASE}/#/login")
+        B.fill('input[name="email"]', buyer["email"])
+        B.fill('input[name="password"]', buyer["pw"])
+        B.click('button[type="submit"]')
+        expect(B.locator("[data-error]")).to_be_visible()  # the account no longer exists
 
         browser.close()
 

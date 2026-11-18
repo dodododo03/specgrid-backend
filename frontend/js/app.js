@@ -7,6 +7,7 @@ import { renderHome } from "./views/home.js";
 import { renderProduct } from "./views/product.js";
 import { renderSell } from "./views/sell.js";
 import { renderLogin, renderSignup } from "./views/auth.js";
+import { renderPrivacy, renderTerms } from "./views/legal.js";
 import { renderTrades, renderFavorites, renderProfile } from "./views/account.js";
 import { renderChat } from "./views/chat.js";
 import { renderRanking } from "./views/ranking.js";
@@ -52,6 +53,8 @@ const ROUTES = [
   [/^\/chat(?:\/(\d+))?$/, (m, ctx) => renderChat({ ...ctx, roomId: m[1] ? Number(m[1]) : null }), "chat"],
   [/^\/login$/, (m, ctx) => renderLogin(ctx)],
   [/^\/signup$/, (m, ctx) => renderSignup(ctx)],
+  [/^\/privacy$/, () => renderPrivacy()],
+  [/^\/terms$/, () => renderTerms()],
 ];
 
 function loginGate(path) {

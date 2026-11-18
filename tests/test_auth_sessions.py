@@ -8,9 +8,9 @@ import redis
 from app.core.config import settings
 from app.core.redis import get_redis
 from app.main import app
-from tests.conftest import API
+from tests.conftest import API, CONSENT
 
-USER = {"email": "sess@specgrid.kr", "password": "Passw0rd!", "nickname": "세션테스트"}
+USER = {"email": "sess@specgrid.kr", "password": "Passw0rd!", "nickname": "세션테스트", **CONSENT}
 
 
 @pytest.fixture
@@ -62,7 +62,7 @@ def test_logout_requires_valid_access_token(client, user):
 
 
 def test_logout_ignores_garbage_or_foreign_refresh_token(client, user):
-    other = {"email": "other@specgrid.kr", "password": "Passw0rd!", "nickname": "남의토큰"}
+    other = {"email": "other@specgrid.kr", "password": "Passw0rd!", "nickname": "남의토큰", **CONSENT}
     client.post(f"{API}/auth/signup", json=other)
     other_tokens = login(client, other["email"], other["password"]).json()
     mine = login(client).json()

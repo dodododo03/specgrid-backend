@@ -1,14 +1,14 @@
 from typing import Annotated
 
-from fastapi import APIRouter, File, Query, UploadFile
+from fastapi import APIRouter, File, Query, Response, UploadFile, status
 from starlette.concurrency import run_in_threadpool
 
-from app.api.deps import CurrentUser, DbSession
+from app.api.deps import ClientIp, CurrentUser, DbSession, LoginLimiterDep, TokenStoreDep
 from app.api.v1.endpoints.product_images import StorageDep, read_limited
 from app.schemas.common import Page
 from app.schemas.product import MyProductParams, ProductSummary, product_page
-from app.schemas.user import UserMe
-from app.services import product_service, profile_service
+from app.schemas.user import UserMe, WithdrawRequest
+from app.services import account_service, product_service, profile_service
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -46,3 +46,27 @@ def delete_profile_image(user: CurrentUser, db: DbSession, storage: StorageDep):
 def my_products(params: Annotated[MyProductParams, Query()], user: CurrentUser, db: DbSession):
     items, total = product_service.list_my_products(db, user, params)
     return product_page(items, total, params.page, params.size)
+
+
+@router.post(
+    "/me/withdraw",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="회원 탈퇴",
+    description=(
+        "현재 비밀번호로 본인 확인 후 탈퇴합니다. 이메일·비밀번호·프로필 사진은 즉시 삭제되고 닉네임은 "
+        "'탈퇴회원#번호'로 바뀌며, 내 판매 상품과 사진·찜은 삭제되고 모든 기기에서 로그아웃됩니다. "
+        "채팅과 완료된 거래 기록은 상대방의 기록이라 남습니다. 예약중(accepted)인 거래가 있으면 409. "
+        "비밀번호가 틀리면 400(wrong_password), 로그인과 같은 횟수 제한(429)이 적용됩니다."
+    ),
+)
+def withdraw(
+    data: WithdrawRequest,
+    user: CurrentUser,
+    db: DbSession,
+    storage: StorageDep,
+    store: TokenStoreDep,
+    limiter: LoginLimiterDep,
+    ip: ClientIp,
+) -> Response:
+    account_service.withdraw(db, storage, store, limiter, user, data.password, ip)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

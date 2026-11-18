@@ -8,9 +8,9 @@ from app.core.config import settings
 from app.core.security import create_token
 from app.models import User
 from app.models.enums import UserStatus
-from tests.conftest import API, signup_and_login
+from tests.conftest import API, CONSENT, signup_and_login
 
-SIGNUP = {"email": "User@SpecGrid.kr", "password": "Passw0rd!", "nickname": "그래픽카드왕"}
+SIGNUP = {"email": "User@SpecGrid.kr", "password": "Passw0rd!", "nickname": "그래픽카드왕", **CONSENT}
 
 
 def test_signup_returns_user_without_secrets(client):

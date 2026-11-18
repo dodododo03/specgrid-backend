@@ -27,10 +27,30 @@ Nickname = Annotated[
 ]
 
 
+def _required_consent(message: str):
+    def check(value: bool) -> bool:
+        if value is not True:
+            raise ValueError(message)
+        return value
+    return AfterValidator(check)
+
+
 class SignupRequest(BaseModel):
     email: EmailStr
     password: Password
     nickname: Nickname
+    # All three are required (필수 동의). Under-14s need a guardian's consent under 개인정보 보호법 §22-2,
+    # which this service doesn't collect, so they can't sign up.
+    agree_terms: Annotated[bool, _required_consent("이용약관에 동의해야 가입할 수 있습니다.")] = Field(
+        description="이용약관 동의 (필수, true)")
+    agree_privacy: Annotated[bool, _required_consent("개인정보 수집·이용에 동의해야 가입할 수 있습니다.")] = Field(
+        description="개인정보 수집·이용 동의 (필수, true)")
+    over_14: Annotated[bool, _required_consent("만 14세 이상만 가입할 수 있습니다.")] = Field(
+        description="만 14세 이상 확인 (필수, true)")
+
+
+class WithdrawRequest(BaseModel):
+    password: str = Field(min_length=1, max_length=128, description="본인 확인용 현재 비밀번호")
 
 
 class LoginRequest(BaseModel):

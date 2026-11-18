@@ -30,6 +30,10 @@ class User(TimestampMixin, Base):
         enum_column(UserStatus, "user_status"), nullable=False, server_default=UserStatus.ACTIVE.value
     )
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime)
+    # Proof of consent at signup (NULL for members created before consent was collected).
+    terms_agreed_at: Mapped[datetime | None] = mapped_column(DateTime)
+    privacy_agreed_at: Mapped[datetime | None] = mapped_column(DateTime)
+    withdrawn_at: Mapped[datetime | None] = mapped_column(DateTime)
 
     products: Mapped[list[Product]] = relationship(back_populates="seller")
 

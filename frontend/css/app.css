@@ -24,6 +24,60 @@ select { background: #131d17; color: #e7eee9; border: 1px solid #3b5142; border-
 .field > span { display: flex; justify-content: space-between; gap: 8px; }
 .field em { font-style: normal; font-size: 10px; }
 .field > label { display: flex; justify-content: space-between; gap: 8px; }
+/* signup consent */
+.consent { border: 1px solid #303a34; border-radius: 6px; padding: 12px 14px; margin: 0; display: flex; flex-direction: column; gap: 9px; font-size: 12px; color: #c1d0c6; }
+.consent label { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+.consent input[type="checkbox"] { width: 16px; height: 16px; accent-color: #39ff88; flex: none; }
+.consent-all { padding-bottom: 9px; border-bottom: 1px solid #303a34; font-size: 13px; }
+.consent-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.consent .req { font-style: normal; color: #39ff88; font-size: 11px; }
+.consent-detail summary { cursor: pointer; color: #8c9b91; font-size: 11px; }
+.consent-detail dl { margin: 8px 0 0; display: grid; gap: 4px; font-size: 11px; }
+.consent-detail dl div { display: grid; grid-template-columns: 64px 1fr; gap: 8px; }
+.consent-detail dt { color: #8c9b91; }
+.consent-detail dd { margin: 0; }
+.link.small { font-size: 11px; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+/* footer: the privacy-policy link must be easy to find (bold, readable size) */
+.footer-bottom { flex-wrap: wrap; font-size: 11px; line-height: 1.6; }
+.footer-links a { color: #9fb1a5; }
+.footer-links a:hover { color: #39ff88; }
+.footer-links .privacy-link { color: #eef2ef; font-weight: 700; }
+/* legal pages */
+.legal { max-width: 860px; margin: 0 auto; padding: 32px 36px; line-height: 1.75; font-size: 14px; color: #c9d5cd; }
+.legal h1 { font-size: 28px; margin: 6px 0 12px; color: #eef2ef; }
+.legal h2 { font-size: 17px; margin: 34px 0 10px; color: #eef2ef; scroll-margin-top: 90px; }
+.legal ul, .legal ol { padding-left: 22px; }
+.legal li { margin: 4px 0; }
+.legal b { color: #eef2ef; }
+.legal .table-wrap { overflow-x: auto; }
+.legal table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.legal th, .legal td { border: 1px solid #303a34; padding: 9px 11px; text-align: left; vertical-align: top; }
+.legal th { background: #1c2620; color: #eef2ef; white-space: nowrap; }
+.legal-toc { border: 1px solid #303a34; border-radius: 6px; padding: 12px 18px; margin: 18px 0; font-size: 13px; }
+.legal-toc ol { columns: 2; margin: 0; }
+.legal-toc a { color: #9fb1a5; }
+.legal-toc a:hover { color: #39ff88; }
+.legal-kv { max-width: 480px; }
+mark.tbd { background: #3a3315; color: #ffd76a; padding: 1px 5px; border-radius: 3px; font-size: .92em; }
+/* 회원 탈퇴 */
+.danger-zone { margin-top: 18px; border-color: #4a2c2c; }
+.danger-zone summary { display: flex; justify-content: space-between; align-items: center; cursor: pointer; list-style: none; }
+.danger-zone summary::-webkit-details-marker { display: none; }
+.danger-zone h2 { margin: 4px 0 0; font-size: 17px; }
+.danger-zone .toggle-label::after { content: "펼치기 ▾"; }
+.danger-zone details[open] .toggle-label::after { content: "접기 ▴"; }
+.danger-zone .eyebrow { color: #ff9a9a; }
+.withdraw-notes { margin: 14px 0; padding-left: 20px; font-size: 13px; line-height: 1.7; color: #c1d0c6; }
+.withdraw-form { display: flex; flex-direction: column; gap: 12px; max-width: 360px; margin-bottom: 10px; }
+.check-line { display: flex; gap: 8px; align-items: center; font-size: 12px; cursor: pointer; }
+.check-line input { accent-color: #ff6b6b; width: 16px; height: 16px; }
+.btn-danger { background: #c94545; border-color: #c94545; color: #fff; }
+.btn-danger:hover { background: #e05a5a; border-color: #e05a5a; color: #fff; }
+@media (max-width: 640px) {
+  .legal { padding: 22px 18px; font-size: 13px; }
+  .legal-toc ol { columns: 1; }
+}
 /* signup: input + "중복 확인" button */
 .check-row { display: flex; gap: 8px; }
 .check-row input { flex: 1; min-width: 0; }

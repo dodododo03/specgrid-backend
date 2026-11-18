@@ -74,7 +74,10 @@ def signup(db: Session, data: SignupRequest) -> User:
         field = "이메일" if existing.email == email else "닉네임"
         raise ConflictError(f"이미 사용 중인 {field}입니다.")
 
-    user = User(email=email, password_hash=hash_password(data.password), nickname=data.nickname)
+    user = User(
+        email=email, password_hash=hash_password(data.password), nickname=data.nickname,
+        terms_agreed_at=func.now(), privacy_agreed_at=func.now(),
+    )
     db.add(user)
     try:
         db.commit()

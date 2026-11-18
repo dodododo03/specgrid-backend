@@ -6,7 +6,7 @@ import pytest
 from starlette.websockets import WebSocketDisconnect
 
 from app.api.v1.endpoints import chat as chat_endpoints
-from tests.conftest import API
+from tests.conftest import API, CONSENT
 from tests.test_chat import buyer, product, room, send, stranger  # noqa: F401 — fixtures
 
 WS = f"{API}/chat/ws"
@@ -48,7 +48,7 @@ def test_invalid_token_rejected(client):
 
 
 def test_refresh_token_rejected(client):
-    r = client.post(f"{API}/auth/signup", json={"email": "r@specgrid.kr", "password": "Passw0rd!", "nickname": "리프"})
+    r = client.post(f"{API}/auth/signup", json={"email": "r@specgrid.kr", "password": "Passw0rd!", "nickname": "리프", **CONSENT})
     tokens = client.post(f"{API}/auth/login", json={"email": "r@specgrid.kr", "password": "Passw0rd!"}).json()
     assert r.status_code == 201
     with client.websocket_connect(WS) as sock:

@@ -130,6 +130,24 @@ export function renderSignup({ query }) {
       <ul class="pw-rules" data-rules>
         <li data-rule="len">8자 이상</li><li data-rule="alpha">영문 포함</li><li data-rule="digit">숫자 포함</li><li data-rule="same">확인과 일치</li>
       </ul>
+      <fieldset class="consent">
+        <legend class="sr-only">약관 동의</legend>
+        <label class="consent-all"><input type="checkbox" data-agree-all> <b>전체 동의</b></label>
+        <label><input type="checkbox" name="over_14" data-agree> <span><em class="req">[필수]</em> 만 14세 이상입니다</span></label>
+        <div class="consent-row"><label><input type="checkbox" name="agree_terms" data-agree> <span><em class="req">[필수]</em> 이용약관 동의</span></label>
+          <a class="link small" href="#/terms" target="_blank" rel="noopener">보기</a></div>
+        <div class="consent-row"><label><input type="checkbox" name="agree_privacy" data-agree> <span><em class="req">[필수]</em> 개인정보 수집·이용 동의</span></label>
+          <a class="link small" href="#/privacy" target="_blank" rel="noopener">전문 보기</a></div>
+        <details class="consent-detail">
+          <summary>수집·이용 내용 요약</summary>
+          <dl>
+            <div><dt>목적</dt><dd>회원 식별·관리, 중고거래 중개(상품 등록·채팅·거래), 부정 이용 방지</dd></div>
+            <div><dt>항목</dt><dd>이메일, 비밀번호, 닉네임 (선택: 프로필 사진)</dd></div>
+            <div><dt>보유 기간</dt><dd>회원 탈퇴 시까지 (탈퇴 즉시 파기)</dd></div>
+            <div><dt>거부 권리</dt><dd>동의를 거부할 수 있으나, 거부하면 회원 가입을 할 수 없습니다.</dd></div>
+          </dl>
+        </details>
+      </fieldset>
       <p class="form-error" data-error role="alert" hidden></p>
       <button class="btn full" type="submit">가입하고 시작하기 ${icon("arrowRight", 16)}</button>
     </form>`,
@@ -149,6 +167,14 @@ export function renderSignup({ query }) {
   }
   form.addEventListener("input", rules);
   bindPasswordToggles(el);
+
+  // ---- 약관 동의: "전체 동의" checks/unchecks all; it is checked only while every item is.
+  const agreeAll = form.querySelector("[data-agree-all]");
+  const agrees = [...form.querySelectorAll("[data-agree]")];
+  form.addEventListener("change", (e) => {
+    if (e.target === agreeAll) agrees.forEach((c) => (c.checked = agreeAll.checked));
+    else if (e.target.matches("[data-agree]")) agreeAll.checked = agrees.every((c) => c.checked);
+  });
 
   // ---- 중복 확인 (email / nickname)
   // confirmed[field] = the exact value the server said is available; editing the field clears it.
@@ -216,6 +242,8 @@ export function renderSignup({ query }) {
     else if (!NICK_RE.test(nickname)) problem = "닉네임은 한글, 영문, 숫자, _만 쓸 수 있어요.";
     else if (!r.len || !r.alpha || !r.digit) problem = "비밀번호는 8자 이상, 영문과 숫자를 모두 포함해야 해요.";
     else if (!r.same) problem = "비밀번호 확인이 일치하지 않아요.";
+    else if (!form.over_14.checked) problem = "만 14세 이상만 가입할 수 있어요.";
+    else if (!form.agree_terms.checked || !form.agree_privacy.checked) problem = "필수 약관에 모두 동의해 주세요.";
     if (problem) return setError(el, problem);
     const [emailOk, nickOk] = await Promise.all([checkField("email"), checkField("nickname")]);
     if (!emailOk || !nickOk) {
@@ -227,7 +255,9 @@ export function renderSignup({ query }) {
     btn.disabled = true;
     setError(el, "");
     try {
-      await api.signup(email, form.password.value, nickname);
+      await api.signup(email, form.password.value, nickname, {
+        agree_terms: form.agree_terms.checked, agree_privacy: form.agree_privacy.checked, over_14: form.over_14.checked,
+      });
       toast(`가입 완료! ${nickname}님, 환영해요.`, "success");
       navigate(next);
     } catch (err) {

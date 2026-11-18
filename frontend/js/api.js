@@ -225,8 +225,8 @@ export async function login(email, password) {
   return loadMe();
 }
 
-export async function signup(email, password, nickname) {
-  await post("/auth/signup", { email, password, nickname }, { auth: "none" });
+export async function signup(email, password, nickname, consent) {
+  await post("/auth/signup", { email, password, nickname, ...consent }, { auth: "none" });
   return login(email, password);
 }
 
@@ -237,6 +237,11 @@ export async function logout(everywhere = false) {
   } catch {
     /* token already invalid: logging out locally is all that's left */
   }
+  clearSession();
+}
+
+/** Drop the local session without calling the server (e.g. after 회원 탈퇴 revoked every token). */
+export function forgetSession() {
   clearSession();
 }
 
