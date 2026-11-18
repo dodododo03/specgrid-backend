@@ -214,3 +214,13 @@ def test_manufacturer_filter_matches_korean_and_english(client, auth_headers):
         assert ids == {kr["id"], en["id"]}, q
     ids = {p["id"] for p in client.get(f"{API}/products", params={"manufacturer": "WD"}).json()["items"]}
     assert ids == {other["id"]}
+
+
+@pytest.mark.parametrize(
+    "menu_label, typed_by_seller",
+    [("LG전자", "LG"), ("LG전자", "엘지"), ("SK하이닉스", "SK hynix"), ("한성컴퓨터", "Hansung"), ("앱코", "ABKO")],
+)
+def test_domestic_brand_menu_labels_find_english_listings(client, auth_headers, menu_label, typed_by_seller):
+    p = create(client, auth_headers, category="storage", title="국내 브랜드 상품", spec={"manufacturer": typed_by_seller})
+    ids = {x["id"] for x in client.get(f"{API}/products", params={"manufacturer": menu_label}).json()["items"]}
+    assert ids == {p["id"]}

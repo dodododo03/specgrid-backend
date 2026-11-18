@@ -9,6 +9,8 @@ ALIAS_GROUPS: list[tuple[str, ...]] = [
     ("삼성", "삼성전자", "Samsung"),
     ("LG", "엘지", "LG전자"),
     ("SK하이닉스", "하이닉스", "SK hynix", "Hynix"),
+    ("한성컴퓨터", "한성", "Hansung"),
+    ("앱코", "ABKO"),
     ("NVIDIA", "엔비디아"),
     ("AMD", "에이엠디"),
     ("Intel", "인텔"),
