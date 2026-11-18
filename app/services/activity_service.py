@@ -8,12 +8,19 @@ Rules:
   If Redis is down we count anyway (fail open: rankings get a bit noisier, nothing breaks).
 - The seller's own views don't count.
 - Chat *content* is never stored here, only ids.
+- Privacy: raw IPs are never stored (DB or Redis) — only a keyed hash (see pseudonymize_ip), and
+  search keywords that look like personal info (email, phone, 주민번호, card/account numbers) are
+  not logged at all, so they can never surface in the public 인기 검색어 ranking.
+- The runtime DB account can only INSERT here and SELECT the ranking columns
+  (scripts/harden_db_privileges.sql); retention is scripts/purge_activity_logs.py.
 
 Dedupe keys: specgrid:seen:view:{product_id}:{viewer}, specgrid:seen:search:{sha1(keyword)}:{viewer}
 """
 
 import hashlib
+import hmac
 import logging
+import re
 from dataclasses import dataclass
 from typing import Any
 
@@ -21,6 +28,7 @@ import redis
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.models import Product, UserActivityLog
 from app.models.enums import ActivityType
 
@@ -29,6 +37,23 @@ logger = logging.getLogger(__name__)
 VIEW_DEDUPE_SECONDS = 30 * 60
 SEARCH_DEDUPE_SECONDS = 10 * 60
 MAX_KEYWORD_LENGTH = 100
+
+_PERSONAL_INFO = re.compile(
+    r"[\w.+-]+@[\w-]+\.[\w.-]+"                 # email
+    r"|01[016789][\s.-]?\d{3,4}[\s.-]?\d{4}"     # mobile phone
+    r"|0\d{1,2}[\s.-]\d{3,4}[\s.-]\d{4}"         # landline (with separators)
+    r"|\d{6}[\s-]?[1-8]\d{6}"                     # 주민/외국인등록번호
+    r"|(?:\d[\s-]?){10,}\d"                       # card / account numbers (11+ digits)
+)
+
+
+def pseudonymize_ip(ip: str) -> str:
+    """Keyed hash of an IP: equal IPs give equal values, but the IP can't be read back."""
+    return hmac.new(settings.log_hash_secret, ip.encode(), hashlib.sha256).hexdigest()[:32]
+
+
+def looks_personal(keyword: str) -> bool:
+    return _PERSONAL_INFO.search(keyword) is not None
 
 
 @dataclass(frozen=True)
@@ -44,7 +69,7 @@ class Viewer:
         if self.user_id is not None:
             return f"u{self.user_id}"
         ua = hashlib.sha1((self.user_agent or "").encode()).hexdigest()[:12]
-        return f"a{self.ip}:{ua}"
+        return f"a{pseudonymize_ip(self.ip)[:16]}:{ua}"
 
 
 def normalize_keyword(raw: str | None) -> str | None:
@@ -73,7 +98,7 @@ class ActivityRecorder:
 
     def record_search(self, raw_keyword: str | None, viewer: Viewer, detail: dict[str, Any]) -> None:
         keyword = normalize_keyword(raw_keyword)
-        if keyword is None:
+        if keyword is None or looks_personal(keyword):
             return
         digest = hashlib.sha1(keyword.encode()).hexdigest()[:16]
         if not self._first_time(f"specgrid:seen:search:{digest}:{viewer.key}", SEARCH_DEDUPE_SECONDS):
@@ -103,7 +128,7 @@ class ActivityRecorder:
                 product_id=product_id,
                 search_keyword=search_keyword,
                 detail=detail,
-                ip_address=viewer.ip[:45],
+                ip_address=pseudonymize_ip(viewer.ip),
                 user_agent=viewer.user_agent,
             ))
             self.db.commit()

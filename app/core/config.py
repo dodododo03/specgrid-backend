@@ -1,3 +1,5 @@
+import hashlib
+import hmac
 from functools import lru_cache
 
 from pydantic import Field
@@ -45,6 +47,11 @@ class Settings(BaseSettings):
     # only accepts it from the site domains registered in Kakao Developers. Empty = maps disabled.
     kakao_js_key: str = ""
 
+    # Activity logs never store a raw IP, only HMAC-SHA256(key, ip): "same IP?" can still be checked
+    # for abuse investigation, but a leaked log table reveals no addresses. Empty = derived from
+    # JWT_SECRET_KEY (set it explicitly in production so rotating the JWT key keeps hashes stable).
+    log_hash_key: str = ""
+
     # Brute-force protection (Redis counters)
     login_max_attempts_per_email: int = 5
     login_max_attempts_per_ip: int = 30
@@ -69,6 +76,12 @@ class Settings(BaseSettings):
     @property
     def migration_database_url(self) -> URL:
         return self._url(self.db_migration_user, self.db_migration_password)
+
+    @property
+    def log_hash_secret(self) -> bytes:
+        if self.log_hash_key:
+            return self.log_hash_key.encode()
+        return hmac.new(self.jwt_secret_key.encode(), b"specgrid-activity-log-ip", hashlib.sha256).digest()
 
 
 # Applied on every new connection: store all timestamps in UTC and reject

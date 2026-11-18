@@ -16,9 +16,10 @@ from datetime import UTC, datetime, timedelta
 from sqlalchemy import delete, func, select
 
 from app.core.config import settings
-from app.db.session import SessionLocal
 from app.models import Product, UserActivityLog
 from app.models.enums import ActivityType, ProductStatus
+from app.services.activity_service import pseudonymize_ip
+from scripts.admin_db import AdminSession  # app account can't delete logs
 
 # (keyword, weight): higher weight = searched more often
 KEYWORDS = [
@@ -35,11 +36,12 @@ def _random_time(days: int) -> datetime:
 
 
 def _fake_viewer() -> dict:
-    return {"ip_address": f"10.0.{random.randint(0, 255)}.{random.randint(1, 254)}", "user_agent": "seed-script"}
+    ip = f"10.0.{random.randint(0, 255)}.{random.randint(1, 254)}"
+    return {"ip_address": pseudonymize_ip(ip), "user_agent": "seed-script"}
 
 
 def seed(searches: int, views: int, days: int) -> None:
-    with SessionLocal() as db:
+    with AdminSession() as db:
         product_ids = list(db.scalars(
             select(Product.id).where(Product.deleted_at.is_(None), Product.status == ProductStatus.ON_SALE)
         ))
@@ -67,7 +69,7 @@ def seed(searches: int, views: int, days: int) -> None:
 
 
 def clear() -> None:
-    with SessionLocal() as db:
+    with AdminSession() as db:
         result = db.execute(
             delete(UserActivityLog).where(
                 UserActivityLog.user_agent == "seed-script",

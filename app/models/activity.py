@@ -22,6 +22,10 @@ class UserActivityLog(CreatedAtMixin, Base):
         # Covering indexes for the rankings: time-window scan + GROUP BY without touching the table.
         Index("ix_user_activity_logs_type_created_keyword", "activity_type", "created_at", "search_keyword"),
         Index("ix_user_activity_logs_type_created_product", "activity_type", "created_at", "product_id"),
+        # No INSERT ... RETURNING: MariaDB requires SELECT on every inserted column for it, and the
+        # app account may not read user_id/ip_address/... here (scripts/harden_db_privileges.sql).
+        # The new id comes from the driver's lastrowid instead.
+        {"implicit_returning": False},
     )
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)

@@ -54,7 +54,7 @@ mariadb -u root -p -h 127.0.0.1 -P 3307 -e "source scripts/init_db.sql"
 | 계정 | 권한 | 용도 |
 |---|---|---|
 | `specgrid_migrator` | DML + CREATE/ALTER/DROP/INDEX/REFERENCES | Alembic 마이그레이션 전용 (`DB_MIGRATION_*`) |
-| `specgrid_app` | SELECT/INSERT/UPDATE/DELETE | FastAPI 런타임 (`DB_*`) |
+| `specgrid_app` | SELECT/INSERT/UPDATE/DELETE (활동 기록 테이블은 아래 제한) | FastAPI 런타임 (`DB_*`) |
 
 모든 연결은 `time_zone='+00:00'`(UTC 저장)과 strict `sql_mode`로 시작한다 (`app/core/config.py`의 `DB_CONNECT_ARGS`).
 이 PC에서는 MariaDB가 **3307**, 별도 MySQL 9.5가 3306을 쓰므로 포트를 혼동하지 않는다.
@@ -66,6 +66,30 @@ alembic upgrade head            # 테이블 생성
 alembic upgrade head --sql      # (선택) DB 없이 실행될 SQL만 확인
 uvicorn app.main:app --reload
 ```
+
+### 활동 기록(로그) 보호
+
+`user_activity_logs`에는 누가 어떤 상품을 보고 무엇을 검색했는지가 쌓이므로, 권한 남용·정보 탈취에 대비해 세 겹으로 막는다.
+
+1. **DB 권한 (최소 권한)** — `alembic upgrade head` 다음에 root로 1회 실행 (테이블이 추가되는 마이그레이션 뒤에도 다시 실행):
+   ```bash
+   mariadb -u root -p -h 127.0.0.1 -P 3307 -e "source scripts/harden_db_privileges.sql"
+   python -m scripts.check_db_security     # 앱 계정으로 직접 시도해 보고 ✅/❌ 출력
+   ```
+   앱 계정(`specgrid_app`)은 활동 기록을 **추가(INSERT)만** 할 수 있고, 랭킹에 필요한 5개 컬럼
+   (`id, activity_type, created_at, search_keyword, product_id`)만 읽을 수 있다. 누가(`user_id`), 어디서(`ip_address`),
+   어떤 브라우저로(`user_agent`) 했는지는 읽을 수 없고, 기록을 **수정·삭제할 수도 없다** — 서버가 해킹되거나
+   SQL 인젝션이 생겨도 사용자 이력을 빼가거나 흔적을 지울 수 없다. 테스트 DB(`specgrid_test`, `specgrid_e2e`)는 테스트가
+   로그를 직접 확인하므로 기존 권한을 유지한다.
+2. **저장 최소화** — IP는 원본 대신 `HMAC-SHA256(LOG_HASH_KEY, ip)`만 저장한다 (같은 IP인지는 확인 가능, IP 복원 불가).
+   Redis 중복 방지 키에도 원본 IP를 쓰지 않는다. 이메일·전화번호·주민번호·카드/계좌번호처럼 보이는 검색어는
+   기록하지 않아 공개 "인기 검색어"에 노출될 수 없다. 채팅 내용은 원래부터 기록하지 않는다.
+3. **보관 기간** — 30일이 지나면 누가/어디서 정보를 지우고(익명화), 180일이 지나면 행을 삭제한다.
+   ```bash
+   python -m scripts.purge_activity_logs --dry-run   # 몇 건이 바뀌는지만 확인
+   python -m scripts.purge_activity_logs             # 실제 적용 (서버에서는 cron으로 매일)
+   ```
+   정리·샘플 데이터 스크립트(`purge_activity_logs`, `seed_activity`)는 웹 서버가 쓰지 않는 `specgrid_migrator` 계정으로 실행된다.
 
 - 웹 화면: **http://localhost:8000/** (회원가입 → 판매 등록 → 검색·필터 → 채팅 → 구매 요청 → 수락·완료)
 - API 문서(Swagger): http://localhost:8000/docs

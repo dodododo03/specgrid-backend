@@ -7,7 +7,7 @@ from sqlalchemy import func, select, update
 
 from app.models import UserActivityLog
 from app.models.enums import ActivityType
-from app.services.activity_service import normalize_keyword
+from app.services.activity_service import looks_personal, normalize_keyword, pseudonymize_ip
 from tests.conftest import API
 from tests.test_chat import buyer, product  # noqa: F401 — fixtures
 from tests.test_products import create, visit
@@ -61,7 +61,52 @@ def test_view_is_logged_with_viewer_info(client, db, buyer, product):
     client.get(f"{API}/products/{product['id']}", headers={**buyer, "User-Agent": "TestBrowser/1.0"})
     (row,) = logs(db, ActivityType.VIEW)
     assert row.product_id == product["id"] and row.user_id is not None
-    assert row.user_agent == "TestBrowser/1.0" and row.ip_address
+    assert row.user_agent == "TestBrowser/1.0"
+    # the raw IP ("testclient" under TestClient) is never stored, only its keyed hash
+    assert row.ip_address == pseudonymize_ip("testclient") and "testclient" not in row.ip_address
+
+
+def test_ip_pseudonymization_is_stable_but_unreadable():
+    a, b = pseudonymize_ip("203.0.113.7"), pseudonymize_ip("203.0.113.8")
+    assert a == pseudonymize_ip("203.0.113.7") and a != b  # same IP -> same value (abuse tracing still works)
+    assert len(a) == 32 and "203" not in a
+
+
+@pytest.mark.parametrize("keyword", [
+    "test@naver.com", "010-1234-5678", "01012345678", "010 1234 5678", "02-123-4567",
+    "900101-1234567", "1234-5678-9012-3456", "110 123 456789", "판매자 연락처 010.1234.5678",
+])
+def test_personal_info_keywords_detected(keyword):
+    assert looks_personal(keyword)
+
+
+@pytest.mark.parametrize("keyword", ["rtx 4090", "i7 14700k", "ddr5 6000 32gb", "2024 맥북 프로", "wd 8tb hdd"])
+def test_normal_keywords_not_flagged(keyword):
+    assert not looks_personal(keyword)
+
+
+def test_personal_info_search_is_not_logged_or_ranked(client, db, product):
+    search(client, "010-1234-5678")
+    search(client, "me@example.com", who="browser-2")
+    search(client, "rtx 4090")
+    assert [r.search_keyword for r in logs(db, ActivityType.SEARCH)] == ["rtx 4090"]
+    assert [k for k, _ in keywords(client, period="day")] == ["rtx 4090"]
+
+
+def test_log_insert_does_not_use_returning(db, monkeypatch):
+    """The production app account may INSERT logs but not SELECT personal columns; MariaDB's
+    INSERT ... RETURNING needs that SELECT, so the ORM must not use it for this table."""
+    statements = []
+    from sqlalchemy import event
+    listener = lambda conn, cursor, stmt, *a: statements.append(stmt)  # noqa: E731
+    event.listen(db.get_bind(), "before_cursor_execute", listener)
+    try:
+        db.add(UserActivityLog(activity_type=ActivityType.VIEW, ip_address="x"))
+        db.flush()
+    finally:
+        event.remove(db.get_bind(), "before_cursor_execute", listener)
+    insert = next(s for s in statements if s.startswith("INSERT INTO user_activity_logs"))
+    assert "RETURNING" not in insert.upper()
 
 
 def test_anonymous_view_is_logged_without_user(client, db, product):
