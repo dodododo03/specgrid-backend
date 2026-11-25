@@ -4,9 +4,9 @@ import { CATEGORIES, CONDITIONS, busy, categoryName, esc, money, toast } from ".
 import { navigate } from "../app.js";
 import { section, workspaceHeader } from "./common.js";
 import { drawMap, geocode, loadKakaoMaps } from "../kakao.js";
+import { PHOTO_ACCEPT, preparePhoto } from "../photos.js";
 
 const MAX_FILES = 10;
-const MAX_MB = 10;
 
 export function renderSell() {
   const el = section();
@@ -60,9 +60,9 @@ export function renderSell() {
           </div>
         </section>
         <section class="panel">
-          <div class="panel-head"><p class="eyebrow">03 / PHOTOS</p><h2>상품 사진</h2><p class="muted">JPG·PNG·WebP, 장당 ${MAX_MB}MB, 최대 ${MAX_FILES}장. 첫 번째 사진이 대표 사진이 돼요. 위치정보(GPS)는 서버에서 자동으로 지워요.</p></div>
+          <div class="panel-head"><p class="eyebrow">03 / PHOTOS</p><h2>상품 사진</h2><p class="muted">최대 ${MAX_FILES}장. 큰 휴대폰 사진은 자동으로 줄여서 올려요. 첫 번째 사진이 대표 사진이 돼요. 위치정보(GPS)는 서버에서 자동으로 지워요.</p></div>
           <label class="dropzone">${icon("image", 26)}<span>사진을 선택하거나 여기로 끌어다 놓으세요</span>
-            <input type="file" name="photos" accept="image/jpeg,image/png,image/webp" multiple hidden></label>
+            <input type="file" name="photos" accept="${PHOTO_ACCEPT}" multiple hidden></label>
           <div class="photo-list" data-photos></div>
         </section>
       </div>
@@ -90,21 +90,22 @@ export function renderSell() {
       : `<span class="muted center">${icon("image", 32)}<br>사진을 등록하면 여기에 보여요.</span>`;
   }
 
-  function addFiles(list) {
-    for (const file of list) {
+  async function addFiles(list) {
+    for (const original of list) {
       if (files.length >= MAX_FILES) {
         toast(`사진은 최대 ${MAX_FILES}장까지 올릴 수 있어요.`, "error");
         break;
       }
-      if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
-        toast(`${file.name}: JPG, PNG, WebP만 올릴 수 있어요.`, "error");
+      let file;
+      try {
+        file = await preparePhoto(original); // shrinks big phone photos, converts HEIC where possible
+      } catch (err) {
+        toast(err.message, "error");
         continue;
       }
-      if (file.size > MAX_MB * 1024 * 1024) {
-        toast(`${file.name}: ${MAX_MB}MB 이하만 올릴 수 있어요.`, "error");
-        continue;
-      }
+      if (!alive) return;
       files.push({ file, url: URL.createObjectURL(file) });
+      renderPhotos();
     }
     renderPhotos();
   }

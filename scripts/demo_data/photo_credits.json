@@ -1,0 +1,128 @@
+{
+  "gpu-rtx3090": {
+    "title": "File:Gigabyte GeForce RTX 3090 Eagle OC 24G, 24576 MiB GDDR6X Front 20201114 DSC5880.jpg",
+    "source": "https://commons.wikimedia.org/wiki/File:Gigabyte_GeForce_RTX_3090_Eagle_OC_24G,_24576_MiB_GDDR6X_Front_20201114_DSC5880.jpg",
+    "author": "PantheraLeo1359531",
+    "license": "CC BY 4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0"
+  },
+  "gpu-rtx3070": {
+    "title": "File:MSI GeForce RTX 3070 VENTUS 3X OC.jpg",
+    "source": "https://commons.wikimedia.org/wiki/File:MSI_GeForce_RTX_3070_VENTUS_3X_OC.jpg",
+    "author": "TheStriker",
+    "license": "CC BY 4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0"
+  },
+  "gpu-rtx5060ti": {
+    "title": "File:Nvidia GeForce RTX 5060 Ti 16GB, PNY Overclocked Dual Fan, front.jpg",
+    "source": "https://commons.wikimedia.org/wiki/File:Nvidia_GeForce_RTX_5060_Ti_16GB,_PNY_Overclocked_Dual_Fan,_front.jpg",
+    "author": "FreeMediaKid!",
+    "license": "CC BY-SA 4.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/4.0"
+  },
+  "cpu-5900x": {
+    "title": "File:AMD Ryzen 9 5900X by BugWarp 03.jpg",
+    "source": "https://commons.wikimedia.org/wiki/File:AMD_Ryzen_9_5900X_by_BugWarp_03.jpg",
+    "author": "BugWarp",
+    "license": "CC0",
+    "license_url": "http://creativecommons.org/publicdomain/zero/1.0/deed.en"
+  },
+  "cpu-9950x": {
+    "title": "File:AMD Ryzen 9 9950X.jpg",
+    "source": "https://commons.wikimedia.org/wiki/File:AMD_Ryzen_9_9950X.jpg",
+    "author": "4300streetcar",
+    "license": "CC BY 4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0"
+  },
+  "ram-ddr5-sodimm": {
+    "title": "File:Kingston FURY Impact DDR5 SO-DIMM Laptop Memory 32GB Module - front view.jpg",
+    "source": "https://commons.wikimedia.org/wiki/File:Kingston_FURY_Impact_DDR5_SO-DIMM_Laptop_Memory_32GB_Module_-_front_view.jpg",
+    "author": "ITEagle Europe - Sebastiaan Broekhoven",
+    "license": "CC BY-SA 4.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/4.0"
+  },
+  "ssd-980pro": {
+    "title": "File:Samsung 980 PRO PCIe 4.0 NVMe SSD 1TB-top PNr°0915.jpg",
+    "source": "https://commons.wikimedia.org/wiki/File:Samsung_980_PRO_PCIe_4.0_NVMe_SSD_1TB-top_PNr%C2%B00915.jpg",
+    "author": "D-Kuru",
+    "license": "CC BY-SA 4.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/4.0"
+  },
+  "hdd-exos12tb": {
+    "title": "File:Seagate ST12000NM0117 2GY101-111 20190718.jpg",
+    "source": "https://commons.wikimedia.org/wiki/File:Seagate_ST12000NM0117_2GY101-111_20190718.jpg",
+    "author": "David290",
+    "license": "CC BY-SA 4.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/4.0"
+  },
+  "laptop-mbp13-m1": {
+    "title": "File:MacBook Pro 13 (M1, 2020).jpg",
+    "source": "https://commons.wikimedia.org/wiki/File:MacBook_Pro_13_(M1,_2020).jpg",
+    "author": "Yagya Parihar",
+    "license": "CC BY-SA 4.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/4.0"
+  },
+  "laptop-galaxybook": {
+    "title": "File:20230729 삼성 갤럭시 북 프로 360.jpg",
+    "source": "https://commons.wikimedia.org/wiki/File:20230729_%EC%82%BC%EC%84%B1_%EA%B0%A4%EB%9F%AD%EC%8B%9C_%EB%B6%81_%ED%94%84%EB%A1%9C_360.jpg",
+    "author": "Striker9498",
+    "license": "CC BY-SA 4.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/4.0"
+  },
+  "desktop-gaming": {
+    "title": "File:PC-Gehäuse Kolink Observatory RGB Midi-Tower 20201120 DSC6134.jpg",
+    "source": "https://commons.wikimedia.org/wiki/File:PC-Geh%C3%A4use_Kolink_Observatory_RGB_Midi-Tower_20201120_DSC6134.jpg",
+    "author": "PantheraLeo1359531",
+    "license": "CC BY 4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0"
+  },
+  "desktop-macmini": {
+    "title": "File:Mac Mini (2018).jpg",
+    "source": "https://commons.wikimedia.org/wiki/File:Mac_Mini_(2018).jpg",
+    "author": "Derorgmas",
+    "license": "CC BY-SA 4.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/4.0"
+  },
+  "server-huawei": {
+    "title": "File:HuaweiRH2288HV2.JPG",
+    "source": "https://commons.wikimedia.org/wiki/File:HuaweiRH2288HV2.JPG",
+    "author": "Open Grid Scheduler / Grid Engine",
+    "license": "CC0",
+    "license_url": "http://creativecommons.org/publicdomain/zero/1.0/deed.en"
+  },
+  "monitor-ultrawide": {
+    "title": "File:Ultra wide monitor.jpg",
+    "source": "https://commons.wikimedia.org/wiki/File:Ultra_wide_monitor.jpg",
+    "author": "Project Kei",
+    "license": "CC BY-SA 4.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/4.0"
+  },
+  "keyboard-mech": {
+    "title": "File:Mechanical Keyboard.jpg",
+    "source": "https://commons.wikimedia.org/wiki/File:Mechanical_Keyboard.jpg",
+    "author": "SolarMainframe",
+    "license": "CC BY-SA 4.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/4.0"
+  },
+  "audio-sony": {
+    "title": "File:Sony WH-CH510 Bluetooth Over-Ear Headphone.jpg",
+    "source": "https://commons.wikimedia.org/wiki/File:Sony_WH-CH510_Bluetooth_Over-Ear_Headphone.jpg",
+    "author": "RPSkokie",
+    "license": "CC BY-SA 4.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/4.0"
+  },
+  "audio-airpods": {
+    "title": "File:AirPods Pro (2nd generation).jpg",
+    "source": "https://commons.wikimedia.org/wiki/File:AirPods_Pro_(2nd_generation).jpg",
+    "author": "Hajoon0102",
+    "license": "CC BY-SA 4.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/4.0"
+  },
+  "etc-g903": {
+    "title": "File:2023 Mysz komputerowa Logitech G903 Lightspeed.jpg",
+    "source": "https://commons.wikimedia.org/wiki/File:2023_Mysz_komputerowa_Logitech_G903_Lightspeed.jpg",
+    "author": "Jacek Halicki",
+    "license": "CC BY-SA 4.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/4.0"
+  }
+}

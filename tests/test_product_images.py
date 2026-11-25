@@ -108,6 +108,18 @@ def test_gps_exif_is_stripped_and_rotation_applied(client, auth_headers, product
     assert (img["width"], img["height"]) == (100, 200)
 
 
+def test_phone_mpo_jpeg_is_accepted(client, auth_headers, product):
+    # Galaxy/iPhone photos are often MPO (a JPEG with extra frames); Pillow reports format "MPO".
+    frames = [Image.new("RGB", (640, 480), (10, 120, 200)), Image.new("RGB", (320, 240), (0, 0, 0))]
+    buf = io.BytesIO()
+    frames[0].save(buf, format="MPO", save_all=True, append_images=frames[1:])
+    with Image.open(io.BytesIO(buf.getvalue())) as check:
+        assert check.format == "MPO"
+    r = upload(client, auth_headers, product["id"], jpg(buf.getvalue()))
+    assert r.status_code == 201, r.text
+    assert (r.json()["images"][0]["width"], r.json()["images"][0]["height"]) == (640, 480)
+
+
 def test_large_image_is_resized(client, auth_headers, product):
     img = upload(client, auth_headers, product["id"], jpg(image_bytes(size=(3000, 1000)))).json()["images"][0]
     assert (img["width"], img["height"]) == (1600, 533)

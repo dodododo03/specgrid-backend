@@ -13,7 +13,7 @@ from PIL import Image, ImageOps, UnidentifiedImageError
 
 from app.core.exceptions import InvalidImageError
 
-ALLOWED_FORMATS = {"JPEG", "PNG", "WEBP"}
+ALLOWED_FORMATS = {"JPEG", "MPO", "PNG", "WEBP"}  # MPO = multi-picture JPEG many phones (Galaxy, iPhone) save
 MAX_PIXELS = 40_000_000          # ~40MP: larger is almost certainly a decompression bomb
 MAIN_MAX_SIDE = 1600
 THUMB_MAX_SIDE = 400

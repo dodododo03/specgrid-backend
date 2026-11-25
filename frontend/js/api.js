@@ -85,7 +85,8 @@ async function parse(res) {
     body = null;
   }
   if (res.ok) return body;
-  if (res.status === 422) throw new ApiError(422, "validation", validationMessage(body?.detail), body?.detail);
+  // FastAPI validation errors carry a detail list; our own 422s (e.g. invalid_image) carry {code, message}.
+  if (res.status === 422 && !body?.message) throw new ApiError(422, "validation", validationMessage(body?.detail), body?.detail);
   const message =
     body?.message ||
     (res.status >= 500 ? "서버에 문제가 생겼어요. 잠시 후 다시 시도해 주세요." : `요청에 실패했어요 (${res.status})`);

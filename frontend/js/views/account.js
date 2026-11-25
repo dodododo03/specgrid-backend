@@ -7,6 +7,7 @@ import {
 } from "../ui.js";
 import { markOwnTradeAction, navigate } from "../app.js";
 import { bindHearts, section, workspaceHeader } from "./common.js";
+import { PHOTO_ACCEPT, preparePhoto } from "../photos.js";
 
 // ================================================================== 거래 내역
 export function renderTrades({ query }) {
@@ -195,7 +196,7 @@ export function renderProfile() {
           <div class="avatar-edit">
             <button type="button" class="avatar-button" data-avatar-pick title="프로필 사진 변경" aria-label="프로필 사진 변경">
               ${avatar(me, 72)}<span class="avatar-cam">${icon("camera", 14)}</span></button>
-            <input type="file" accept="image/jpeg,image/png,image/webp" data-avatar-file hidden>
+            <input type="file" accept="${PHOTO_ACCEPT}" data-avatar-file hidden>
             ${me.profile_image_url ? `<button type="button" class="link-button small" data-avatar-remove>사진 삭제</button>` : ""}
           </div>
           <div><p class="eyebrow">MY ACCOUNT</p><h2>${esc(me.nickname)}</h2><p class="muted">${esc(me.email)}</p></div></div>
@@ -303,10 +304,15 @@ export function renderProfile() {
 
   el.addEventListener("change", async (e) => {
     if (e.target.matches("[data-avatar-file]")) {
-      const file = e.target.files[0];
+      const picked = e.target.files[0];
       e.target.value = ""; // picking the same file again should still fire "change"
-      if (!file) return;
-      if (file.size > 10 * 1024 * 1024) return toast("사진은 10MB 이하만 올릴 수 있어요.", "error");
+      if (!picked) return;
+      let file;
+      try {
+        file = await preparePhoto(picked);
+      } catch (err) {
+        return toast(err.message, "error");
+      }
       const fd = new FormData();
       fd.append("file", file);
       const btn = el.querySelector("[data-avatar-pick]");

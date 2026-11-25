@@ -9,6 +9,7 @@ import {
 import { markOwnTradeAction, navigate } from "../app.js";
 import { bindHearts, goLogin } from "./common.js";
 import { directionsUrl, drawMap, loadKakaoMaps, openMapModal, placeUrl } from "../kakao.js";
+import { PHOTO_ACCEPT, preparePhoto } from "../photos.js";
 
 export function renderProduct({ id }) {
   const el = document.createElement("section");
@@ -69,7 +70,7 @@ export function renderProduct({ id }) {
           </label>
           <p class="muted small">예약·판매완료는 보통 <a class="link" href="#/trades">거래 내역</a>에서 수락/완료하면 자동으로 바뀌어요.</p>
           <div class="row-actions">
-            <label class="btn btn-secondary file-btn">${icon("image", 16)} 사진 추가<input type="file" data-upload accept="image/jpeg,image/png,image/webp" multiple hidden></label>
+            <label class="btn btn-secondary file-btn">${icon("image", 16)} 사진 추가<input type="file" data-upload accept="${PHOTO_ACCEPT}" multiple hidden></label>
             <a class="btn btn-secondary" href="#/trades">${icon("repeat", 16)} 들어온 요청 보기</a>
             <button class="btn btn-danger" data-delete>${icon("trash", 16)} 삭제</button>
           </div>
@@ -258,14 +259,18 @@ export function renderProduct({ id }) {
       return;
     }
     if (e.target.matches("[data-upload]")) {
-      const files = [...e.target.files];
+      const picked = [...e.target.files];
       e.target.value = "";
-      if (!files.length) return;
-      const bad = files.find((f) => !["image/jpeg", "image/png", "image/webp"].includes(f.type) || f.size > 10 * 1024 * 1024);
-      if (bad) return toast(`${bad.name}: JPG/PNG/WebP, 10MB 이하만 올릴 수 있어요.`, "error");
+      if (!picked.length) return;
+      toast("사진을 올리는 중이에요…", "info", 1500);
+      let files;
+      try {
+        files = await Promise.all(picked.map(preparePhoto)); // shrinks big phone photos
+      } catch (err) {
+        return toast(err.message, "error");
+      }
       const form = new FormData();
       files.forEach((f) => form.append("files", f));
-      toast("사진을 올리는 중이에요…", "info", 1500);
       try {
         product = await api.request("POST", `/products/${product.id}/images`, { form, auth: "required" });
         toast(`사진 ${files.length}장을 추가했어요.`, "success");
